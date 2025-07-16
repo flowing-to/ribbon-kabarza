@@ -125,13 +125,13 @@ export function useCarouselImages() {
 				}
 			  }
 		  }
-		//   if(webflowImages.length > 0){
+		  if(webflowImages.length > 0){
 			  return webflowImages
-		//   } else {
-		// 	  return Array(carouselCount)
-		// 		  .fill(undefined)
-		// 		  .map((_, i) => `https://flowing-canvas.vercel.app/images/img${Math.floor(i % carouselCount) + 1}_.webp`)
-		//   }  
+		  } else {
+		 	  return Array(carouselCount)
+		 		  .fill(undefined)
+		 		  .map((_, i) => `https://flowing-canvas.vercel.app/images/img${Math.floor(i % carouselCount) + 1}_.webp`)
+		  }  
 	  }, [])
 
 	const imageTextures = useTexture(imageUrls)
@@ -145,9 +145,6 @@ export function useCarouselImages() {
 
 
 export function useCarouselTexts() {
-
-
-
 	const [domReady, setDomReady] = useState(false)
 
 	useEffect(() => {
@@ -162,31 +159,31 @@ export function useCarouselTexts() {
 	}, [])
 
 	const imageTexts = useMemo(() => {
-		// console.log(domReady)
-		if (!domReady) {
-			// Return placeholder URLs while waiting for DOM
-			return titlesList
-		}
+		console.log('useCarouselTexts - domReady:', domReady)
+		
+		const webflowTexts: {imageNum: number, title: string}[] = [{ imageNum: 0, title: 'FLOWING' }]
 
-	const webflowTexts: {imageNum: number, title: string}[] = [{ imageNum: 0, title: 'FLOWING' },]
-
+		// Try to get text from DOM elements
 		for (let i = 1; i <= carouselCount; i++) {
 			const element = document.querySelector(`[data-flow-ribbon-text-nr="${i}"]`)
-			// console.log('element', element)
+			console.log(`Element ${i}:`, element)
 			if (element) {
-				let imageTexts = ''
-
-				const imgElement = element as HTMLImageElement
-				imageTexts =  imgElement.textContent ? imgElement.textContent.trim() : imgElement.innerText
-				const item = {imageNum: i, title: imageTexts}
-
-				webflowTexts.push(item)
+				const textContent = element.textContent ? element.textContent.trim() : element.textContent
+				console.log(`Text ${i}:`, textContent)
+				if (textContent) {
+					webflowTexts.push({imageNum: i, title: textContent})
+				}
 			}
 		}
-		if (webflowTexts.length > 0) {
+		
+		console.log('webflowTexts:', webflowTexts)
+		
+		// If we have DOM texts, use them, otherwise fallback to titlesList
+		if (webflowTexts.length > 1) {
 			return webflowTexts
 		} else {
-			return  titlesList
+			console.log('Using fallback titlesList')
+			return titlesList
 		}
 	}, [domReady])
 
