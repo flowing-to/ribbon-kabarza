@@ -93,24 +93,37 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
     "idle" | "first-chunk" | "text-change" | "second-chunk"
   >("idle");
 
+  function getFontSize(textLength: number) {
+    const letterWidth = (window.innerWidth * 0.8) / textLength;
+
+    //average
+    const pixelUnitToFont = 7.5;
+
+    return Math.floor(letterWidth / pixelUnitToFont);
+  }
+
+  // Update font size on resize
+  useEffect(() => {
+    const handleResize = () => {
+      const currentText = imageTexts.find(
+        (item) => item.imageNum === imageIndex
+      )?.title;
+      if (currentText && textRef.current) {
+        const newFontSize = getFontSize(currentText.length);
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        textRef.current.fontSize = newFontSize;
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [imageTexts, imageIndex]);
+
   useEffect(() => {
     const imageText = imageTexts.find(
       (item) => item.imageNum === imageIndex
     )?.title;
-    const imageTextMobile = imageText
-      ? imageText.split(" ").length > 1
-        ? ((transferTop.current = true),
-          imageText
-            .split(" ")
-            .map((word, index) =>
-              word.length > 1 && index + 1 !== imageText.split(" ").length
-                ? `${word}\n`
-                : `${word}`
-            )
-            .join(""))
-        : ((transferTop.current = false), imageText)
-      : "";
-
     // if (animationState.current !== 'idle') return // Prevent multiple animations
     if (!imageText || !ribbonSheet) return;
     // if(state === 'normal'){
@@ -131,26 +144,16 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
         if (textRef.current) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
-          textRef.current.text = isMobile ? imageTextMobile : imageText;
-          const fontSizeDesktop =
-            imageText.length > 12 ? 28 : imageText.length > 10 ? 32 : 40;
-          const fontSizeMobile =
-            currentImage.current === 0
-              ? 24
-              : imageText.length > 12
-              ? 14
-              : imageText.length > 9
-              ? 18
-              : 20;
+          textRef.current.text = imageText;
+
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
-          textRef.current.fontSize = isMobile
-            ? fontSizeMobile
-            : fontSizeDesktop;
+          textRef.current.fontSize = getFontSize(imageText.length);
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
-          textRef.current.anchorY =
-            transferTop.current && isMobile ? "bottom-baseline" : "middle";
+          // textRef.current.anchorY =
+          //   transferTop.current && isMobile ? "bottom-baseline" : "middle";
+          textRef.current.anchorY = "middle";
         }
         animationState.current = "text-change";
 
@@ -297,7 +300,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
                 ? "https://flowing-canvas.vercel.app/fonts/Manrope-Bold.ttf"
                 : "https://flowing-canvas.vercel.app/fonts/Manrope-SemiBold.ttf"
             }
-            fontSize={isMobile ? 24 : 40}
+            fontSize={1}
             anchorX="center"
             anchorY="middle"
             fontWeight={800}
