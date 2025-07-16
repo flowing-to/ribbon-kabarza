@@ -1,25 +1,23 @@
-
-import './App.css'
-import Scene from './components/canvas/Scene'
+import "./App.css";
+import Scene from "./components/canvas/Scene";
 
 function App() {
-
   return (
     <div className="flex w-screen h-screen items-center justify-center bg-[#d8d8d8] overflow-hidden ">
       <div
         style={{
-          position: 'fixed',
+          position: "fixed",
           top: 0,
           left: 0,
-          width: '100vw',
-          height: '100vh',
-          pointerEvents: 'none',
+          width: "100vw",
+          height: "100vh",
+          pointerEvents: "none",
         }}
       >
         <Scene />
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

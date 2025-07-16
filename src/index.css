@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: 'Manrope';
-  src: url('/fonts/Manrope-VariableFont_wght.ttf') format('truetype');
+  font-family: "Manrope";
+  src: url("/fonts/Manrope-VariableFont_wght.ttf") format("truetype");
   font-weight: 200 800;
   font-display: swap;
 }
@@ -13,68 +13,67 @@
   }
 }
 
-  html,
-  body,
-  :root {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    /* overflow: hidden; */
-  }
-
+html,
+body,
+:root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  /* overflow: hidden; */
+}
 
 .manrope-thin {
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-optical-sizing: auto;
   font-weight: 200;
   font-style: normal;
 }
 
 .manrope-extralight {
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-optical-sizing: auto;
   font-weight: 300;
   font-style: normal;
 }
 
 .manrope-light {
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
 }
 
 .manrope-regular {
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
 }
 
 .manrope-semibold {
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-optical-sizing: auto;
   font-weight: 500;
   font-style: normal;
 }
 
 .manrope-bold {
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-optical-sizing: auto;
   font-weight: 600;
   font-style: normal;
 }
 
 .manrope-extrabold {
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-optical-sizing: auto;
   font-weight: 700;
   font-style: normal;
 }
 
 .manrope-black {
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-optical-sizing: auto;
   font-weight: 800;
   font-style: normal;

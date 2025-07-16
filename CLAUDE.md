@@ -17,6 +17,7 @@ This is a Three.js/React application featuring an animated 3D ribbon with image 
 ## Architecture Overview
 
 ### Core Technologies
+
 - **React 18** with TypeScript
 - **Three.js** for 3D graphics and WebGL
 - **@react-three/fiber** - React renderer for Three.js
@@ -28,18 +29,21 @@ This is a Three.js/React application featuring an animated 3D ribbon with image 
 ### Key Components Structure
 
 **Scene.tsx** (`src/components/canvas/Scene.tsx:54-242`)
+
 - Main 3D scene orchestrator
 - Handles asset preloading and animation sequencing using Theatre.js
 - Manages responsive behavior and performance monitoring
 - Controls the main animation timeline that plays on load
 
 **Experience.tsx** (`src/components/canvas/Experience.tsx:156-621`)
+
 - Core 3D experience component containing all 3D objects
 - Implements custom shader materials for ribbon and images
 - Manages carousel interactions (click, drag, momentum)
 - Handles camera controls and user input
 
 **Carousel System**
+
 - 12 images arranged in a circle (`carouselCount = 12`)
 - Interactive dragging with momentum-based physics
 - Click-to-focus individual images with smooth rotation
@@ -48,6 +52,7 @@ This is a Three.js/React application featuring an animated 3D ribbon with image 
 ### Shader System
 
 The project uses custom GLSL shaders located in `src/glsl/`:
+
 - **Ribbon shaders** (`ribbon/`) - Animate the flowing ribbon along a 3D curve
 - **Image shaders** (`image/`) - Handle carousel image rendering with effects
 - **Text shaders** (`text/`, `ribbonText/`) - Text rendering on surfaces
@@ -61,6 +66,7 @@ The project uses custom GLSL shaders located in `src/glsl/`:
 ### Asset Loading
 
 Images and text content are loaded from the DOM using data attributes:
+
 - Images: `[data-flow-ribbon-img="1"]` through `[data-flow-ribbon-img="12"]`
 - Text: `[data-flow-ribbon-text-nr="1"]` through `[data-flow-ribbon-text-nr="12"]`
 
