@@ -24,7 +24,7 @@ export const TextShaderMaterial = shaderMaterial(
     uResolution: new Vector3(1, 1, 1),
   },
   textVertex,
-  textFragment,
+  textFragment
 );
 extend({ TextShaderMaterial });
 
@@ -66,6 +66,7 @@ type TitleTextProps = {
   timeRef: MutableRefObject<number>;
   currentImage: MutableRefObject<number>;
   isMobile: boolean;
+  screenWidth: number;
 };
 
 export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
@@ -99,14 +100,20 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
     //average
     const pixelUnitToFont = 7.5;
 
-    return Math.floor(letterWidth / pixelUnitToFont);
+    const finalSize = Math.min(
+      Math.max(Math.floor(letterWidth / pixelUnitToFont), 20),
+      30
+    );
+    console.log(finalSize, Math.floor(letterWidth / pixelUnitToFont));
+
+    return Math.floor(finalSize);
   }
 
   // Update font size on resize
   useEffect(() => {
     const handleResize = () => {
       const currentText = imageTexts.find(
-        (item) => item.imageNum === imageIndex,
+        (item) => item.imageNum === imageIndex
       )?.title;
       if (currentText && textRef.current) {
         const newFontSize = getFontSize(currentText.length);
@@ -122,7 +129,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
 
   useEffect(() => {
     const imageText = imageTexts.find(
-      (item) => item.imageNum === imageIndex,
+      (item) => item.imageNum === imageIndex
     )?.title;
     // if (animationState.current !== 'idle') return // Prevent multiple animations
     if (!imageText || !ribbonSheet) return;
@@ -202,7 +209,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
     // 		})
     // 	}, 30) // Small delay for text visibility
     // }
-  }, [ribbonSheet, imageIndex, isMobile]);
+  }, [ribbonSheet, imageIndex]);
 
   const txtProgress1 = ribbonSheet?.object(
     "txtProgress1",
@@ -212,7 +219,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
         nudgeMultiplier: 0.0001,
       }),
     },
-    { reconfigure: true },
+    { reconfigure: true }
   );
   txtProgress1?.onValuesChange((value) => {
     textProgress1Ref.current = value.x;
@@ -226,7 +233,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
         nudgeMultiplier: 0.0001,
       }),
     },
-    { reconfigure: true },
+    { reconfigure: true }
   );
   txtProgress2?.onValuesChange((value) => {
     textProgress2Ref.current = value.x;
@@ -240,7 +247,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
         nudgeMultiplier: 0.0001,
       }),
     },
-    { reconfigure: true },
+    { reconfigure: true }
   );
   txtProgress3?.onValuesChange((value) => {
     textProgress3Ref.current = value.x;

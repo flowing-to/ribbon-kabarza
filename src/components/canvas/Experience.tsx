@@ -65,7 +65,7 @@ const RibbonShaderMaterial = shaderMaterial(
     uFabricRoughness: null,
   },
   ribbonVertex,
-  ribbonFragment,
+  ribbonFragment
 );
 extend({ RibbonShaderMaterial });
 
@@ -107,7 +107,7 @@ export const ImageShaderMaterial = shaderMaterial(
     uProgress: 0,
   },
   imageVertex,
-  imageFragment,
+  imageFragment
 );
 extend({ ImageShaderMaterial });
 
@@ -138,7 +138,7 @@ const SphereShaderMaterial = shaderMaterial(
     uColor: new THREE.Color("#d8d8d8"),
   },
   vertex,
-  fragment,
+  fragment
 );
 extend({ SphereShaderMaterial });
 
@@ -160,12 +160,14 @@ type ExperienceProps = {
   progressRef: MutableRefObject<number>;
   timeRef: MutableRefObject<number>;
   isMobile: boolean;
+  screenWidth: number;
 };
 
 export default function Experience({
   progressRef,
   timeRef,
   isMobile,
+  screenWidth,
 }: ExperienceProps) {
   const isClient = useIsClient();
 
@@ -173,7 +175,7 @@ export default function Experience({
   const cameraLookAtRef = useRef<THREE.Mesh>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const [ribbonMat, setRibbonMat] = useState<IRibbonShaderMaterial | null>(
-    null,
+    null
   );
   const planeRef = useRef<THREE.Mesh>(null);
   const carouselRef = useRef<THREE.Group>(null);
@@ -198,7 +200,7 @@ export default function Experience({
   const curve = useMemo(
     () =>
       new THREE.CatmullRomCurve3([...baseCurvePoints], false, "chordal", 0.5),
-    [],
+    []
   );
 
   // derive the progress thresholds…
@@ -242,7 +244,7 @@ export default function Experience({
 
   // const incrementQuaternion = new THREE.Quaternion()
   const targetQuaternionContinuous = useRef(
-    new THREE.Quaternion().setFromEuler(initialEuler),
+    new THREE.Quaternion().setFromEuler(initialEuler)
   );
 
   const handleCarouselClick = (idx: number) => {
@@ -317,7 +319,7 @@ export default function Experience({
   const firstPointerDown = useRef(false);
   // const targetEuler = useRef(new THREE.Euler(0, 0, -0.1))
   const setIsCarouselReady = useCarouselStore(
-    (state) => state.setIsCarouselReady,
+    (state) => state.setIsCarouselReady
   );
 
   const dxLerp = useRef(0);
@@ -358,7 +360,7 @@ export default function Experience({
               progress: progressRef.current,
               isAtCarousel: progressRef.current >= carouselStartPoint,
             },
-          }),
+          })
         );
       }
     }
@@ -404,7 +406,7 @@ export default function Experience({
             carouselSpeed.current,
             0,
             70,
-            delta,
+            delta
           );
           // easing.damp(carouselSpeed, 'current', -1, 0.1, 0.01, 0.02)
           // easing.dampQ(carouselRef.current.quaternion, targetQuaternionContinuous.current, 0.01, 0.01)
@@ -418,7 +420,7 @@ export default function Experience({
           // carouselRef.current.quaternion.slerpQuaternions(carouselRef.current.quaternion, targetQuaternion.current, delta * 3)
           easing.dampQ(
             carouselRef.current.quaternion,
-            targetQuaternion.current,
+            targetQuaternion.current
           );
 
           if (
@@ -450,13 +452,13 @@ export default function Experience({
             // Create incremental rotation
             rotatingCarouselQuanternion.setFromAxisAngle(
               axis,
-              carouselSpeed.current * delta,
+              carouselSpeed.current * delta
             );
 
             // Apply to target quaternion
             targetQuaternionContinuous.current.multiplyQuaternions(
               rotatingCarouselQuanternion,
-              targetQuaternionContinuous.current,
+              targetQuaternionContinuous.current
             );
 
             // Smooth interpolation
@@ -464,7 +466,7 @@ export default function Experience({
               carouselRef.current.quaternion,
               targetQuaternionContinuous.current,
               0.1,
-              0.01,
+              0.01
             );
             // lastPointerX.current = state.pointer.x
           } else if (
@@ -505,19 +507,19 @@ export default function Experience({
 
               tempVelocityQuanternion.setFromAxisAngle(
                 axis,
-                -dxLerp.current * 1.2,
+                -dxLerp.current * 1.2
               );
               // console.log('dx', dxLerp.current)
               targetQuaternionContinuous.current.multiplyQuaternions(
                 tempVelocityQuanternion,
-                targetQuaternionContinuous.current,
+                targetQuaternionContinuous.current
               );
 
               easing.dampQ(
                 carouselRef.current.quaternion,
                 targetQuaternionContinuous.current,
                 0.1,
-                0.01,
+                0.01
               );
             }
             if (pointerDown.current && !clicked.current) {
@@ -556,7 +558,7 @@ export default function Experience({
         ref={cameraRef}
         theatreKey="Camera"
         makeDefault
-        fov={isMobile ? 110 : 69}
+        fov={Math.min(Math.max(75000 / screenWidth, 70), 115)}
         position={[0, 2, 10]}
         near={0.001}
         far={50000}
@@ -625,11 +627,11 @@ export default function Experience({
             key={i}
             position={[
               Math.sin(
-                ((carouselCount - 1 - i) / carouselCount) * Math.PI * 2,
+                ((carouselCount - 1 - i) / carouselCount) * Math.PI * 2
               ) * carouselRadius,
               15,
               Math.cos(
-                ((carouselCount - 1 - i) / carouselCount) * Math.PI * 2,
+                ((carouselCount - 1 - i) / carouselCount) * Math.PI * 2
               ) * carouselRadius,
             ]}
             rotation={[
@@ -666,6 +668,7 @@ export default function Experience({
         timeRef={timeRef}
         currentImage={currentImage}
         isMobile={isMobile}
+        screenWidth={screenWidth}
       />
 
       {/* <OrbitControls /> */}

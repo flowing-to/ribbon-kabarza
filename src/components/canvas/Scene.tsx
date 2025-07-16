@@ -33,7 +33,7 @@ export const project = getProject(
     ? {
         state: projectState,
       }
-    : undefined,
+    : undefined
 );
 
 export const ribbonSheet = project.sheet("Ribbon r3f Sheet");
@@ -42,10 +42,10 @@ function PreloadAssets() {
   const { imageUrls } = useCarouselImages();
   useTexture([...imageUrls]);
   useTexture(
-    "https://flowing-canvas.vercel.app/linen/Plain_Grey_Texture_col.jpg",
+    "https://flowing-canvas.vercel.app/linen/Plain_Grey_Texture_col.jpg"
   );
   useTexture(
-    "https://flowing-canvas.vercel.app/linen/Plain_Grey_Texture_nrm.jpg",
+    "https://flowing-canvas.vercel.app/linen/Plain_Grey_Texture_nrm.jpg"
   );
 
   return <></>;
@@ -56,22 +56,12 @@ export default function Scene() {
   // const [start, setStart] = useState(false)
   // const isClient = useIsClient()
   // const GPUTier = useDetectGPU()
-  const { width } = useWindowSize();
+  const { width: screenWidth } = useWindowSize();
   const [isMobile, setIsMobile] = useState(true);
   const [animationStart, setAnimationStart] = useState(false);
   const { total, progress } = useProgress();
   const [readyToStart, setReadyToStart] = useState(false);
   const [dpr, setDpr] = useState(2);
-
-  useEffect(() => {
-    if (!width) return;
-    // console.log('width', width)
-    if (width < 768) {
-      setIsMobile(true);
-    } else {
-      setIsMobile(false);
-    }
-  }, [width]);
 
   useEffect(() => {
     // setReadyToStart(false)
@@ -119,7 +109,7 @@ export default function Scene() {
         nudgeMultiplier: 0.0001,
       }),
     },
-    { reconfigure: true },
+    { reconfigure: true }
   );
   animationProgress?.onValuesChange((value) => {
     progressRef.current = value.x;
@@ -133,7 +123,7 @@ export default function Scene() {
         nudgeMultiplier: 0.0001,
       }),
     },
-    { reconfigure: true },
+    { reconfigure: true }
   );
   time?.onValuesChange((value) => {
     timeRef.current = value.t;
@@ -203,6 +193,7 @@ export default function Scene() {
                   progressRef={progressRef}
                   timeRef={timeRef}
                   isMobile={isMobile}
+                  screenWidth={screenWidth ?? 1000}
                 />
                 <PerformanceMonitor
                   bounds={(refreshrate) => {
