@@ -183,7 +183,7 @@ export default function Scene() {
           backgroundColor: "transparent",
         }}
       >
-        <Stats />
+        {stats()}
 
         <Suspense fallback={null}>
           <SheetProvider sheet={ribbonSheet}>
@@ -226,4 +226,11 @@ export default function Scene() {
       {/* <Interface /> */}
     </>
   );
+}
+
+function stats() {
+  const href = window.location.href;
+  if (href.includes(".webflow.io") || href.includes("localhost:"))
+    return <Stats />;
+  return <></>;
 }

@@ -96,12 +96,15 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
 
   function getFontSize(textLength: number) {
     const letterWidth = (window.innerWidth * 0.8) / textLength;
+    console.log({ letterWidth });
 
     //average
     const pixelUnitToFont = 7.5;
 
+    console.log({ converted: letterWidth / pixelUnitToFont });
+
     const finalSize = Math.min(
-      Math.max(Math.floor(letterWidth / pixelUnitToFont), 20),
+      Math.max(Math.floor(letterWidth / pixelUnitToFont), 15),
       30
     );
     console.log(finalSize, Math.floor(letterWidth / pixelUnitToFont));
