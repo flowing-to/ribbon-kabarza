@@ -2,10 +2,21 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import glsl from "vite-plugin-glsl";
+import { visualizer } from "rollup-plugin-visualizer";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), glsl()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    glsl(),
+    visualizer({
+      filename: "dist/stats.html", // output file
+      open: true, // open in browser
+      gzipSize: true, // show gzipped sizes
+      brotliSize: true, // show brotli sizes
+    }),
+  ],
   // base: 'https://flowing-canvas.vercel.app/',
   server: {
     host: "0.0.0.0",
