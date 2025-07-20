@@ -4,5 +4,9 @@
     "name": "main",
     "src": "src/main.tsx",
     "isEntry": true
+  },
+  "style.css": {
+    "file": "style-CcD9QTN4.css",
+    "src": "style.css"
   }
 }

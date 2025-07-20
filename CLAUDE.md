@@ -8,23 +8,24 @@ This is a Three.js/React application featuring an animated 3D ribbon with image 
 
 ## Development Commands
 
-- `npm run dev` - Start development server with Vite
-- `npm run build` - Build production bundle (outputs to `build/` directory)
+- `npm run dev` - Start development server with Vite (runs on 0.0.0.0 with CORS enabled)
+- `npm run build` - Build production bundle (outputs to `build/` directory as UMD)
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint on JS/JSX files
-- `npm run format` - Fix linting issues and format code
+- `npm run format` - Fix linting issues and format code with Prettier
 
 ## Architecture Overview
 
 ### Core Technologies
 
-- **React 18** with TypeScript
-- **Three.js** for 3D graphics and WebGL
+- **React 18** with TypeScript (strict mode enabled)
+- **Three.js (v0.175.0)** for 3D graphics and WebGL
 - **@react-three/fiber** - React renderer for Three.js
 - **@react-three/drei** - Helper components and utilities
 - **@theatre/core** & **@theatre/r3f** - Animation sequencing and timeline
-- **Vite** - Build tool with HMR
+- **Vite** - Build tool with HMR and single-file bundling
 - **TailwindCSS** - Utility-first CSS
+- **Zustand** - Lightweight state management
 
 ### Key Components Structure
 
@@ -74,10 +75,11 @@ This allows the 3D application to integrate with CMS content from external syste
 
 ## Build Configuration
 
-- Vite builds to UMD format as `build/main.js`
+- Vite builds to UMD format as `build/main.js` using `vite-plugin-singlefile`
 - Supports GLSL shader imports via `vite-plugin-glsl`
-- Development server runs with CORS enabled for external asset loading
+- Development server runs on `0.0.0.0` with CORS enabled for external asset loading
 - Build excludes jQuery as external dependency
+- TypeScript with strict mode and project references (app/node configs)
 
 ## Key Files to Understand
 
