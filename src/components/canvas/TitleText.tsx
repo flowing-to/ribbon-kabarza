@@ -96,16 +96,17 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
 
   function getFontSize(textLength: number) {
     const letterWidth = (window.innerWidth * 0.8) / textLength;
-
+    
     //average
     const pixelUnitToFont = 7.5;
-
+    
     const finalSize = Math.min(
-      Math.max(Math.floor(letterWidth / pixelUnitToFont), 20),
+      Math.max(Math.floor(letterWidth / pixelUnitToFont), 10),
       30
     );
     console.log(finalSize, Math.floor(letterWidth / pixelUnitToFont));
-
+    
+    console.log({finalSize})
     return Math.floor(finalSize);
   }
 
@@ -152,6 +153,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
           textRef.current.text = imageText;
+
 
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
@@ -307,7 +309,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
                 ? "https://flowing-canvas.vercel.app/fonts/Manrope-Bold.ttf"
                 : "https://flowing-canvas.vercel.app/fonts/Manrope-SemiBold.ttf"
             }
-            fontSize={1}
+            fontSize={getFontSize("FLOWING".length)}
             anchorX="center"
             anchorY="middle"
             fontWeight={800}

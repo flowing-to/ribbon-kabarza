@@ -4,21 +4,24 @@ import * as THREE from "three";
 import { Vector3 } from "three";
 import type { IimageShaderMaterial } from "./Experience";
 
-const titlesList = [
-  { imageNum: 0, title: "FLOWING" },
-  { imageNum: 1, title: "NEWYORK" },
-  { imageNum: 2, title: "FURNITURE" },
-  { imageNum: 3, title: "CS AGENCY" },
-  { imageNum: 4, title: "ATELIER" },
-  { imageNum: 5, title: "ANCHOR" },
-  { imageNum: 6, title: "EXHITBITON" },
-  { imageNum: 7, title: "ART & TECH" },
-  { imageNum: 8, title: "ORCHARD" },
-  { imageNum: 9, title: "EXHITBITON" },
-  { imageNum: 10, title: "PEAK" },
-  { imageNum: 11, title: "SOUL" },
-  { imageNum: 12, title: "OTHER MONTHS" },
-];
+
+
+
+let titlesList:{imageNum:number, img:string, title:string}[] = [];
+[...document.querySelectorAll("[data-flow-ribbon-nr]")].forEach(el => {
+  const imageNum = parseInt(el.getAttribute("data-flow-ribbon-nr")!)
+  const title = el.getAttribute("data-flow-ribbon-text")!
+  const img = el.getAttribute("src")!
+
+  titlesList.push({
+    imageNum,
+    title,
+    img
+  })
+})
+titlesList = titlesList.sort((a,b) => b.imageNum - a.imageNum)
+
+console.log(titlesList)
 
 export const carouselRadius = 26;
 export const carouselCount = 12;
