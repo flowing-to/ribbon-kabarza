@@ -118,7 +118,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
         (item) => item.imageNum === imageIndex
       )?.title;
       if (currentText && textRef.current) {
-        const newFontSize = getFontSize(currentText.length);
+        const newFontSize = getFontSize(Math.max(...imageTexts.map(e => e.title.length)));
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-expect-error
         textRef.current.fontSize = newFontSize;
@@ -156,12 +156,12 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
             // @ts-expect-error
               textRef.current.text = "Flowing";
                // @ts-expect-error
-              textRef.current.fontSize = getFontSize("flowing".length);
+              // textRef.current.fontSize = getFontSize("flowing".length);
             } else {
             // @ts-expect-error
               textRef.current.text = imageText;
-          // @ts-expect-error
-          textRef.current.fontSize = getFontSize(imageText.length);
+              // @ts-expect-error
+              // textRef.current.fontSize = getFontSize(imageText.length);
 
             }
 
@@ -321,7 +321,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
                 ? "https://flowing-canvas.vercel.app/fonts/Manrope-Bold.ttf"
                 : "https://flowing-canvas.vercel.app/fonts/Manrope-SemiBold.ttf"
             }
-            fontSize={getFontSize("FLOWING".length)}
+            fontSize={getFontSize(Math.max(...imageTexts.map(e => e.title.length)))}
             anchorX="center"
             anchorY="middle"
             fontWeight={800}
