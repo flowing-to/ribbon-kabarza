@@ -134,7 +134,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
       (item) => item.imageNum === imageIndex
     )?.title;
     // if (animationState.current !== 'idle') return // Prevent multiple animations
-    if (!imageText || !ribbonSheet) return;
+    if ( (!imageText && imageIndex !== 0) ||!ribbonSheet) return;
     // if(state === 'normal'){
     // Start the animation sequence
     animationState.current = "first-chunk";
@@ -152,13 +152,21 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
         // Change text after first chunk completes
         if (textRef.current) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          if (imageIndex === 0) {
+            // @ts-expect-error
+              textRef.current.text = "Flowing";
+               // @ts-expect-error
+              textRef.current.fontSize = getFontSize("flowing".length);
+            } else {
+            // @ts-expect-error
+              textRef.current.text = imageText;
           // @ts-expect-error
-          textRef.current.text = imageText;
+          textRef.current.fontSize = getFontSize(imageText.length);
+
+            }
 
 
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-expect-error
-          textRef.current.fontSize = getFontSize(imageText.length);
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
           // textRef.current.anchorY =
@@ -170,7 +178,10 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
         // Small delay to let text change be visible
         setTimeout(() => {
           // animationState.current = 'idle'
-          selectedImage.current = imageIndex;
+          if (imageIndex !== 0) {
+            
+            selectedImage.current = imageIndex;
+          }
           // Second chunk: animate from (7 + 23/30) to (9 + 8/30)
           ribbonSheet.sequence
             .play({

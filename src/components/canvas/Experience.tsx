@@ -583,7 +583,7 @@ export default function Experience({
 				<sphereShaderMaterial key={SphereShaderMaterial.key} side={THREE.BackSide} />
 			</mesh> */}
 
-      <mesh position={[0, 0, -100]} onClick={(e) => clickObserver(e)}>
+      <mesh position={[0, 0, 70]} onClick={(e) => clickObserver(e)}>
         <planeGeometry args={[3000, 3000, 1, 1]} />
         <meshBasicMaterial
           color={"transparent"}
