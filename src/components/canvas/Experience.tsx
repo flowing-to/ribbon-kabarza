@@ -7,6 +7,7 @@ import { useIsClient } from "@uidotdev/usehooks";
 import { MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Vector3 } from "three";
+import { debug } from "../../config";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import ribbonVertex from "../../glsl/ribbon/ribbonVertex.glsl";
@@ -305,9 +306,12 @@ export default function Experience({
   const clickObserver = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (!pointerUp.current) dragMomentum.current = 0;
-    // console.log(hovered.current)
-    if (currentImage.current !== 0 && e.currentTarget) {
+    if (debug) console.log('Click outside detected, currentImage:', currentImage.current);
+    
+    // Reset to FLOWING text when clicking outside the carousel
+    if (currentImage.current !== 0) {
       currentImage.current = 0;
+      if (debug) console.log('Reset to FLOWING');
     }
   };
 
@@ -579,13 +583,14 @@ export default function Experience({
 				<sphereShaderMaterial key={SphereShaderMaterial.key} side={THREE.BackSide} />
 			</mesh> */}
 
-      <mesh position={[-20, 60, 80]} onClick={(e) => clickObserver(e)}>
-        <planeGeometry args={[2000, 800, 1, 1]} />
+      <mesh position={[0, 0, -100]} onClick={(e) => clickObserver(e)}>
+        <planeGeometry args={[3000, 3000, 1, 1]} />
         <meshBasicMaterial
-          color={"red"}
-          side={THREE.BackSide}
+          color={"transparent"}
+          side={THREE.DoubleSide}
           transparent
-          alphaTest={20}
+          opacity={0}
+          alphaTest={0.001}
         />
       </mesh>
 
