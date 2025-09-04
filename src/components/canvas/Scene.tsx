@@ -18,6 +18,7 @@ import Experience from "./Experience";
 // import Interface from './Interface'
 import { useIsClient, useWindowSize } from "@uidotdev/usehooks";
 import { useCarouselImages } from "./constants";
+import { debug } from "../../config";
 
 const isProd = true;
 
@@ -65,10 +66,10 @@ export default function Scene() {
 
   useEffect(() => {
     // setReadyToStart(false)
-    console.log("total", total);
-    console.log("progress", progress);
+    if (debug) console.log("total", total);
+    if (debug) console.log("progress", progress);
     if (total > 13 && progress === 100) {
-      console.log("start");
+      if (debug) console.log("start");
       // const timer = setTimeout(() => {
       setReadyToStart(true);
       // }, 500)
@@ -135,7 +136,7 @@ export default function Scene() {
       ribbonSheet.sequence.position = 0;
       // Delay the animation by 2.5 seconds
       const animationTimer = setTimeout(() => {
-        console.log("Animation started");
+        if (debug) console.log("Animation started");
         ribbonSheet.sequence.position = 0;
         project.ready.then(() => {
           setAnimationStart(true);
@@ -155,7 +156,7 @@ export default function Scene() {
 
   return (
     <>
-      <Leva hidden />
+      {debug && <Leva />}
       <Canvas
         shadows
         gl={{
@@ -183,7 +184,7 @@ export default function Scene() {
           backgroundColor: "transparent",
         }}
       >
-        <Stats />
+        {debug && <Stats />}
 
         <Suspense fallback={null}>
           <SheetProvider sheet={ribbonSheet}>
@@ -210,7 +211,7 @@ export default function Scene() {
                   }}
                   flipflops={3}
                   onFallback={(api) => {
-                    console.log("api", api);
+                    if (debug) console.log("api", api);
                     if (dpr === 2 && api.fps < 55) setDpr(1);
                     // console.log(dpr)
                     // console.log('fallback')

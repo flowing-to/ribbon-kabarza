@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Vector3 } from "three";
 import type { IimageShaderMaterial } from "./Experience";
+import { debug } from "../../config";
 
 
 
@@ -21,7 +22,7 @@ let titlesList:{imageNum:number, img:string, title:string}[] = [];
 })
 titlesList = titlesList.sort((a,b) => b.imageNum - a.imageNum)
 
-console.log(titlesList)
+if (debug) console.log(titlesList)
 
 export const carouselRadius = 26;
 export const carouselCount = 12;
@@ -174,7 +175,7 @@ export function useCarouselTexts() {
   }, []);
 
   const imageTexts = useMemo(() => {
-    console.log("useCarouselTexts - domReady:", domReady);
+    if (debug) console.log("useCarouselTexts - domReady:", domReady);
 
     const webflowTexts: { imageNum: number; title: string }[] = [
       { imageNum: 0, title: "FLOWING" },
@@ -185,25 +186,25 @@ export function useCarouselTexts() {
       const element = document.querySelector(
         `[data-flow-ribbon-text-nr="${i}"]`,
       );
-      console.log(`Element ${i}:`, element);
+      if (debug) console.log(`Element ${i}:`, element);
       if (element) {
         const textContent = element.textContent
           ? element.textContent.trim()
           : element.textContent;
-        console.log(`Text ${i}:`, textContent);
+        if (debug) console.log(`Text ${i}:`, textContent);
         if (textContent) {
           webflowTexts.push({ imageNum: i, title: textContent });
         }
       }
     }
 
-    console.log("webflowTexts:", webflowTexts);
+    if (debug) console.log("webflowTexts:", webflowTexts);
 
     // If we have DOM texts, use them, otherwise fallback to titlesList
     if (webflowTexts.length > 1) {
       return webflowTexts;
     } else {
-      console.log("Using fallback titlesList");
+      if (debug) console.log("Using fallback titlesList");
       return titlesList;
     }
   }, [domReady]);

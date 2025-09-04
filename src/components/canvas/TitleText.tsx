@@ -5,6 +5,7 @@ import { editable as e, useCurrentSheet } from "@theatre/r3f";
 import { MutableRefObject, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { Vector3 } from "three";
+import { debug } from "../../config";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import textVertex from "../../glsl/text/textVertex.glsl";
@@ -104,9 +105,9 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
       Math.max(Math.floor(letterWidth / pixelUnitToFont), 10),
       30
     );
-    console.log(finalSize, Math.floor(letterWidth / pixelUnitToFont));
+    if (debug) console.log(finalSize, Math.floor(letterWidth / pixelUnitToFont));
     
-    console.log({finalSize})
+    if (debug) console.log({finalSize})
     return Math.floor(finalSize);
   }
 

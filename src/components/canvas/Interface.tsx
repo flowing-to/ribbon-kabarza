@@ -1,6 +1,7 @@
 import { useCarouselStore } from "../../lib/store/useCarouselStore";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { debug } from "../../config";
 
 // const title = 'FLOWING'
 
@@ -34,7 +35,7 @@ export default function Interface() {
     if (buttonTextRef.current) {
       const width = buttonTextRef.current.getBoundingClientRect().width;
       setTextWidth(width);
-      console.log(textWidth, "textWidth");
+      if (debug) console.log(textWidth, "textWidth");
     }
   }, [setTextWidth, buttonTextRef, textWidth]);
 
