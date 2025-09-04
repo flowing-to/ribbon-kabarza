@@ -118,10 +118,19 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
         (item) => item.imageNum === imageIndex
       )?.title;
       if (currentText && textRef.current) {
-        const newFontSize = getFontSize(Math.max(...imageTexts.map(e => e.title.length)));
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        textRef.current.fontSize = newFontSize;
+        if (imageIndex !== 0) {
+
+          const newFontSize = getFontSize(Math.max(...imageTexts.map(e => e.title.length)));
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
+          textRef.current.fontSize = newFontSize;
+        } else {
+          const newFontSize = getFontSize("flowing".length);
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
+          textRef.current.fontSize = newFontSize;
+
+        }
       }
     };
 
@@ -156,12 +165,12 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
             // @ts-expect-error
               textRef.current.text = "Flowing";
                // @ts-expect-error
-              // textRef.current.fontSize = getFontSize("flowing".length);
+              textRef.current.fontSize = getFontSize("flowing".length);
             } else {
             // @ts-expect-error
               textRef.current.text = imageText;
-              // @ts-expect-error
-              // textRef.current.fontSize = getFontSize(imageText.length);
+          // @ts-expect-error
+          textRef.current.fontSize = getFontSize(Math.max(...imageTexts.map(e => e.title.length)));
 
             }
 
@@ -321,7 +330,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
                 ? "https://flowing-canvas.vercel.app/fonts/Manrope-Bold.ttf"
                 : "https://flowing-canvas.vercel.app/fonts/Manrope-SemiBold.ttf"
             }
-            fontSize={getFontSize(Math.max(...imageTexts.map(e => e.title.length)))}
+            fontSize={getFontSize("FLOWING".length)}
             anchorX="center"
             anchorY="middle"
             fontWeight={800}
