@@ -63,16 +63,16 @@ declare module "@react-three/fiber" {
 // 	{ imageNum: 12, title: 'OTHER MONTHS' },
 // ]
 
-const text = "Flowing"
 
 type TitleTextProps = {
   timeRef: MutableRefObject<number>;
   currentImage: MutableRefObject<number>;
   isMobile: boolean;
   screenWidth: number;
+  text: string
 };
 
-export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
+export default function TitleText({ currentImage, isMobile, text = "Fallback Text" }: TitleTextProps) {
   const textGroupRef = useRef<THREE.Group>(null);
   const groupRef = useRef<THREE.Group>(null);
 

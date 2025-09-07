@@ -37,6 +37,7 @@ import {
   baseCurvePoints,
   carouselCount,
   carouselRadius,
+  getLandingTextData,
   MOMENTUM_BOOST,
   numPoints,
   progressLength,
@@ -171,6 +172,8 @@ export default function Experience({
   screenWidth,
 }: ExperienceProps) {
   const isClient = useIsClient();
+
+  const text = useMemo(() => getLandingTextData(), [])
 
   const lookAtTarget = new THREE.Vector3(0, 0, 0);
   const cameraLookAtRef = useRef<THREE.Mesh>(null);
@@ -674,6 +677,7 @@ export default function Experience({
         currentImage={currentImage}
         isMobile={isMobile}
         screenWidth={screenWidth}
+        text={text}
       />
 
       {/* <OrbitControls /> */}

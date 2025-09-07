@@ -97,6 +97,10 @@ export function useLinenTextures() {
   return { col, normal };
 }
 
+export function getLandingTextData() {
+  return  document.querySelector(`[data-flow-default-text]`)?.textContent ?? "fallback Text"
+}
+
 export function useCarouselImages() {
   // const [domReady, setDomReady] = useState(false)
 
