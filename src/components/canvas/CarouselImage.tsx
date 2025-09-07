@@ -103,7 +103,8 @@ export const CarouselImage = forwardRef<THREE.Mesh, CarouselImageProps>(
     const originalWorldScale = new THREE.Vector3(1, 1, 1);
     // const targetWorldScale = new THREE.Vector3(1.15, 1.15, 1.15);
 
-    const targetWorldScale = new THREE.Vector3(1.2, 1.15, 1.4); // Increased scale from 1.15
+    //TODO here kabarza to make image bigger
+    const targetWorldScale = new THREE.Vector3(1.2, 1.2, 1.2); // Increased scale from 1.15
     // const basePosition = new THREE.Vector3(0,0,0)
     // const ribbonSheet = useCurrentSheet()
 

@@ -63,6 +63,8 @@ declare module "@react-three/fiber" {
 // 	{ imageNum: 12, title: 'OTHER MONTHS' },
 // ]
 
+const text = "Flowing"
+
 type TitleTextProps = {
   timeRef: MutableRefObject<number>;
   currentImage: MutableRefObject<number>;
@@ -96,18 +98,30 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
   >("idle");
 
   function getFontSize(textLength: number) {
-    const letterWidth = (window.innerWidth * 0.8) / textLength;
+
+    // 1000/100*
+
+    const screenW = (Math.min(window.innerWidth,1100))
+
+    const letterWidth = screenW / textLength;
+    console.log(letterWidth)
     
+    // 1 at 1100, 0 at 0
+    const boost = 1/ 1100 * screenW * 2
+    // console.log(boost)
+
     //average
-    const pixelUnitToFont = 7.5;
+    const pixelUnitToFont = 6
     
-    const finalSize = Math.min(
-      Math.max(Math.floor(letterWidth / pixelUnitToFont), 10),
-      30
-    );
-    if (debug) console.log(finalSize, Math.floor(letterWidth / pixelUnitToFont));
+    let finalSize = (letterWidth * ((3 - boost))) / pixelUnitToFont 
     
-    if (debug) console.log({finalSize})
+    // const finalSize = Math.min(
+    //   Math.max(Math.floor(letterWidth), 10),
+    //   30
+    // );
+    // if (debug) console.log(finalSize, Math.floor(letterWidth / pixelUnitToFont));
+    
+    // if (debug) console.log({finalSize})
     return Math.floor(finalSize);
   }
 
@@ -125,7 +139,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
           // @ts-expect-error
           textRef.current.fontSize = newFontSize;
         } else {
-          const newFontSize = getFontSize("flowing".length);
+          const newFontSize = getFontSize(text.length);
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
           textRef.current.fontSize = newFontSize;
@@ -163,9 +177,9 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           if (imageIndex === 0) {
             // @ts-expect-error
-              textRef.current.text = "Flowing";
+              textRef.current.text = text;
                // @ts-expect-error
-              textRef.current.fontSize = getFontSize("flowing".length);
+              textRef.current.fontSize = getFontSize(text.length);
             } else {
             // @ts-expect-error
               textRef.current.text = imageText;
@@ -330,7 +344,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
                 ? "https://flowing-canvas.vercel.app/fonts/Manrope-Bold.ttf"
                 : "https://flowing-canvas.vercel.app/fonts/Manrope-SemiBold.ttf"
             }
-            fontSize={getFontSize("FLOWING".length)}
+            fontSize={getFontSize(text.length)}
             anchorX="center"
             anchorY="middle"
             fontWeight={800}
@@ -342,7 +356,7 @@ export default function TitleText({ currentImage, isMobile }: TitleTextProps) {
             outlineWidth={0}
             sdfGlyphSize={256}
           >
-            {"FLOWING"}
+            {text}
             <textShaderMaterial
               key={TextShaderMaterial.key}
               ref={textMatRef}
