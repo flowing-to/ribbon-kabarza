@@ -98,7 +98,14 @@ export function useLinenTextures() {
 }
 
 export function getLandingTextData() {
-  return  document.querySelector(`[data-flow-default-text]`)?.textContent ?? "fallback Text"
+  const el = document.querySelector(`[data-flow-default-text]`)
+  if (el === null) {
+    console.warn("No element with attribute data-flow-default-text set")
+    return "fallback Text"
+  }
+
+return  (el.getAttribute("data-flow-default-text")?? "fallback Text").replace("\\n", `
+`)
 }
 
 export function useCarouselImages() {

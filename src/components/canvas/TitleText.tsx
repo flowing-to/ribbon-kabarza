@@ -97,9 +97,8 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
     "idle" | "first-chunk" | "text-change" | "second-chunk"
   >("idle");
 
-  function getFontSize(textLength: number) {
-
-    // 1000/100*
+  function getFontSize(...text:string[]) {
+    const textLength = text.join("\n").split("\n").map(e => e.trim()).sort((a,b) => b.length-a.length)[0].length
 
     const screenW = (Math.min(window.innerWidth,1100))
 
@@ -111,7 +110,8 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
     // console.log(boost)
 
     //average
-    const pixelUnitToFont = 6
+    const pixelUnitToFont = 5.8
+    //6 good
     
     let finalSize = (letterWidth * ((3 - boost))) / pixelUnitToFont 
     
@@ -134,12 +134,12 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
       if (currentText && textRef.current) {
         if (imageIndex !== 0) {
 
-          const newFontSize = getFontSize(Math.max(...imageTexts.map(e => e.title.length)));
+          const newFontSize = getFontSize(...imageTexts.map(e => e.title));
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
           textRef.current.fontSize = newFontSize;
         } else {
-          const newFontSize = getFontSize(text.length);
+          const newFontSize = getFontSize(text);
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
           textRef.current.fontSize = newFontSize;
@@ -179,12 +179,12 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
             // @ts-expect-error
               textRef.current.text = text;
                // @ts-expect-error
-              textRef.current.fontSize = getFontSize(text.length);
+              textRef.current.fontSize = getFontSize(text);
             } else {
             // @ts-expect-error
               textRef.current.text = imageText;
           // @ts-expect-error
-          textRef.current.fontSize = getFontSize(Math.max(...imageTexts.map(e => e.title.length)));
+          textRef.current.fontSize = getFontSize(...imageTexts.map(e => e.title));
 
             }
 
@@ -323,12 +323,13 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
     // }
     if (!isMobile) {
       groupRef.current.position.x = -3;
+      groupRef.current.position.y = -1; // Move text down by 1 unit
     } else {
       groupRef.current.position.x = 1;
       if (transferTop.current) {
-        easing.damp(groupRef.current.position, "y", -12);
+        easing.damp(groupRef.current.position, "y", -13); // Move down by 1 unit (was -12)
       } else {
-        easing.damp(groupRef.current.position, "y", 0);
+        easing.damp(groupRef.current.position, "y", -1); // Move down by 1 unit (was 0)
       }
     }
   });
@@ -344,7 +345,7 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
                 ? "https://flowing-canvas.vercel.app/fonts/Manrope-Bold.ttf"
                 : "https://flowing-canvas.vercel.app/fonts/Manrope-SemiBold.ttf"
             }
-            fontSize={getFontSize(text.length)}
+            fontSize={getFontSize(text)}
             anchorX="center"
             anchorY="middle"
             fontWeight={800}
