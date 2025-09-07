@@ -96,12 +96,14 @@ export const CarouselImage = forwardRef<THREE.Mesh, CarouselImageProps>(
     const originalLocalPosition = useRef(new THREE.Vector3(0));
     // const originalLocalScale = useRef(new THREE.Vector3())
     const isSelected = useRef(false);
-    const targetWorldPosition = useRef(new THREE.Vector3(0, -9, -5)); // Static world position
+    const targetWorldPosition = useRef(new THREE.Vector3(0, -9, -5)); // Static world position - moved closer to camera
     // const tempMatrix = useRef(new THREE.Matrix4())
     const tempVector = useRef(new THREE.Vector3());
     // const tempVectorScale = useRef(new THREE.Vector3())
     const originalWorldScale = new THREE.Vector3(1, 1, 1);
-    const targetWorldScale = new THREE.Vector3(1.15, 1.15, 1.15);
+    // const targetWorldScale = new THREE.Vector3(1.15, 1.15, 1.15);
+
+    const targetWorldScale = new THREE.Vector3(1.2, 1.15, 1.4); // Increased scale from 1.15
     // const basePosition = new THREE.Vector3(0,0,0)
     // const ribbonSheet = useCurrentSheet()
 
