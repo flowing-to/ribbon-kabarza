@@ -144,6 +144,7 @@ export const CarouselImage = forwardRef<THREE.Mesh, CarouselImageProps>(
       if (carouselRef.current && meshRef.current) {
         if (currentImage.current === index + 1) {
           if (!isSelected.current) {
+            window.onFlowingClick?.forEach(e => e(currentImage.current))
             // Store original position when first selected
             // originalLocalPosition.current.copy(basePosition)
             isSelected.current = true;
@@ -250,6 +251,7 @@ export const CarouselImage = forwardRef<THREE.Mesh, CarouselImageProps>(
               m.uniforms.uProgress.value = 0;
               animationState.current = "idle";
               isSelected.current = false;
+
             }
           }
         }
@@ -261,6 +263,12 @@ export const CarouselImage = forwardRef<THREE.Mesh, CarouselImageProps>(
       // this card’s slice
 
       const smooth = THREE.MathUtils.smootherstep(p, start, end);
+      if (smooth > 0.12 && m.uniforms.uOffset.value <= 0.12 && smooth !== 1) {
+        window.onFlowingCarouselSlideVisible?.forEach(element => {
+            element(index)
+        });
+        // console.log(`Image ${index} becoming visible: offset=${smooth}`);
+      }
       m.uniforms.uOffset.value = smooth;
 
       // time
@@ -284,6 +292,12 @@ export const CarouselImage = forwardRef<THREE.Mesh, CarouselImageProps>(
 
       const isRibbonAtCarousel = progressRef.current >= carouselStart;
       wasAtCarousel.current = isRibbonAtCarousel;
+      
+      if (index === 0 && m.uniforms.uOffset.value > 0.12 && !wasAtCarousel.current) {
+        window.onFlowingRibbonStart?.forEach(e => {
+            e()
+        });
+      }
     });
 
     return (

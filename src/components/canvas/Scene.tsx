@@ -140,7 +140,8 @@ export default function Scene() {
         ribbonSheet.sequence.position = 0;
         project.ready.then(() => {
           setAnimationStart(true);
-          // ribbonSheet.sequence.position = 0
+          console.log("ribbon start")
+          window.onFlowingRibbonStart?.forEach(e => e())
           ribbonSheet.sequence.play({
             range: [0, 6 + 22 / 30],
           });

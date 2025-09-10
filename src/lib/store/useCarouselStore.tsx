@@ -15,5 +15,7 @@ export const useCarouselStore = create<CarouselState>((set) => ({
   currentText: 0,
   setCurrentText: (currentText) => set({ currentText }),
   carouselReady: false,
-  setIsCarouselReady: (carouselReady) => set({ carouselReady }),
+  setIsCarouselReady: (carouselReady) => {
+    set({ carouselReady })
+  },
 }));

@@ -196,6 +196,8 @@ export default function Experience({
   const rotationDone = useRef(true);
   const frontImageCheck = useRef(false);
   const isAnimating = useRef(false);
+  const ribbonEndFired = useRef(false);
+  const lastClickedImage = useRef(0);
 
   const { col, normal } = useLinenTextures();
   const { imageTextures, imageShaderRefs } = useCarouselImages();
@@ -272,12 +274,14 @@ export default function Experience({
       if (rotationDone.current) {
         targetQuaternion.current = targetQ;
         currentImage.current = idx + 1;
+        lastClickedImage.current = idx + 1;
       }
 
       frontImageCheck.current = false;
     } else {
       frontImageCheck.current = true;
       currentImage.current = idx + 1;
+      lastClickedImage.current = idx + 1;
     }
   };
 
@@ -313,6 +317,9 @@ export default function Experience({
     
     // Reset to FLOWING text when clicking outside the carousel
     if (currentImage.current !== 0) {
+      if (typeof window !== 'undefined') {
+        window.offFlowingClick?.forEach(e => e(lastClickedImage.current));
+      }
       currentImage.current = 0;
       if (debug) console.log('Reset to FLOWING');
     }
@@ -339,7 +346,10 @@ export default function Experience({
 
     if (planeRef.current) {
       if (progressRef.current >= 0.9) {
-        if (planeRef.current) setIsCarouselReady(true);
+        
+        if (planeRef.current) {
+          setIsCarouselReady(true);
+        };
         planeRef.current.visible = false;
       } else {
         planeRef.current.visible = true;
@@ -350,6 +360,14 @@ export default function Experience({
       setCurrentText(1);
     } else {
       setCurrentText(0);
+    }
+
+    const ribbonEndThreshold = 0.9
+    if (progressRef.current >= ribbonEndThreshold && ribbonEndFired.current == false && progressRef.current !== 1.5) {
+      ribbonEndFired.current = true;
+      if (typeof window !== 'undefined') {
+        window.onFlowingRibbonEnd?.forEach(e => e());
+      }
     }
 
     if (cameraRef.current && cameraLookAtRef.current) {
@@ -630,7 +648,8 @@ export default function Experience({
 
       {/* carousel  */}
       <group ref={carouselRef} rotation={initialEuler}>
-        {new Array(carouselCount).fill(undefined).map((_, i) => (
+        {new Array(carouselCount).fill(undefined).map((_, i) => {
+          return (
           <CarouselImage
             key={i}
             position={[
@@ -669,7 +688,7 @@ export default function Experience({
             isAnimating={isAnimating}
             carouselSpeed={carouselSpeed}
           />
-        ))}
+        )})}
       </group>
 
       <TitleText
