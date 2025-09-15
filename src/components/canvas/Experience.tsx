@@ -372,7 +372,7 @@ export default function Experience({
     }
 
     if (cameraRef.current && cameraLookAtRef.current) {
-      cameraRef.current.position.y = -yOffset/2.8
+      cameraRef.current.position.y = -yOffset/2.9
       cameraRef.current.lookAt(cameraLookAtRef.current.position);
     }
 
