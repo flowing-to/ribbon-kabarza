@@ -583,10 +583,11 @@ export default function Experience({
         ref={cameraRef}
         theatreKey="Camera"
         makeDefault
-        fov={Math.min(Math.max(75000 / screenWidth, 70), 115)}
+        // fov={Math.min(Math.max(75000 / screenWidth, 70), 115)}
+        fov={Math.min(Math.max(75000 / screenWidth ** 1.001, 55), 108)}
         position={[0, 2, 10]}
         near={0.001}
-        far={50000}
+        far={55000}
       />
 
       <e.mesh
