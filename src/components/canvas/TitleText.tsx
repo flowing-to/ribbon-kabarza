@@ -13,7 +13,7 @@ import textVertex from "../../glsl/text/textVertex.glsl";
 // @ts-expect-error
 import textFragment from "../../glsl/text/textFragment.glsl";
 import { easing } from "maath";
-import { useCarouselTexts } from "./constants";
+import { useCarouselTexts, yOffset } from "./constants";
 
 export const TextShaderMaterial = shaderMaterial(
   {
@@ -323,13 +323,17 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
     // }
     if (!isMobile) {
       groupRef.current.position.x = -3;
-      groupRef.current.position.y = -1; // Move text down by 1 unit
+      // groupRef.current.position.y = -1 -yOffset; // Move text down by 1 unit
+      // groupRef.current.position.y = -1 -yOffset * 3; // Move text down by 1 unit
+      groupRef.current.position.y = -1 -yOffset * 1; // Move text down by 1 unit
     } else {
       groupRef.current.position.x = 1;
       if (transferTop.current) {
-        easing.damp(groupRef.current.position, "y", -13); // Move down by 1 unit (was -12)
+        // easing.damp(groupRef.current.position, "y", -13 -yOffset * 2.8); // Move down by 1 unit (was -12)
+        easing.damp(groupRef.current.position, "y", -13 -yOffset * 1); // Move down by 1 unit (was -12)
       } else {
-        easing.damp(groupRef.current.position, "y", -1); // Move down by 1 unit (was 0)
+        // easing.damp(groupRef.current.position, "y", -1 -yOffset * 2.8); // Move down by 1 unit (was 0)
+        easing.damp(groupRef.current.position, "y", -1 -yOffset * 1); // Move down by 1 unit (was 0)
       }
     }
   });

@@ -190,7 +190,7 @@ export default function Scene() {
         <Suspense fallback={null}>
           <SheetProvider sheet={ribbonSheet}>
             {readyToStart && (
-              <group visible={animationStart} dispose={null}>
+              <group visible={animationStart} dispose={null} >
                 <Experience
                   progressRef={progressRef}
                   timeRef={timeRef}

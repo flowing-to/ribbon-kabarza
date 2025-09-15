@@ -80,6 +80,8 @@ export const baseCurvePoints: Vector3[] = [
   new Vector3(50, -16, -82),
 ];
 
+export const yOffset = 5
+
 export function useLinenTextures() {
   const col = useTexture(
     "https://flowing-canvas.vercel.app/linen/Plain_Grey_Texture_col.jpg",

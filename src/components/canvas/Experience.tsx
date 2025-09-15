@@ -45,6 +45,7 @@ import {
   useFrenetDataTexture,
   useLinenTextures,
   useMomentum,
+  yOffset,
 } from "./constants";
 import TitleText from "./TitleText";
 
@@ -371,6 +372,7 @@ export default function Experience({
     }
 
     if (cameraRef.current && cameraLookAtRef.current) {
+      cameraRef.current.position.y = -yOffset/2.8
       cameraRef.current.lookAt(cameraLookAtRef.current.position);
     }
 
@@ -735,7 +737,8 @@ export default function Experience({
               Math.sin(
                 ((carouselCount - 1 - i) / carouselCount) * Math.PI * 2
               ) * carouselRadius,
-              15,
+              // 15,
+              15 - yOffset,
               Math.cos(
                 ((carouselCount - 1 - i) / carouselCount) * Math.PI * 2
               ) * carouselRadius,
