@@ -577,6 +577,82 @@ export default function Experience({
 
   if (!isClient) return null;
 
+  const num = 75000
+
+   const scale = (x: number): number =>
+
+
+
+    Math.max(0, Math.min(1, 1 - x / 1000));
+
+   function scaleInverted(x = 0, a = 0, b = 1000) {
+  if (a === b) throw new Error("a and b must differ");
+  const t = (b - x) / (b - a);        // 1 at x=a, 0 at x=b
+  const res = Math.max(0, Math.min(1, t))
+  console.log({res})
+  return res
+}
+
+  // const calc = num / screenWidth ** 1.001 + 10 * scaleInverted(screenWidth,1000,200)
+  const calcT = (num / screenWidth ** 1.001) - 30 * scaleInverted(screenWidth,200,800)
+
+  console.log(calcT, Math.min(Math.max(calcT, 55), 130))
+
+  //I hate that kabarza forced me to do this. It's the result of his existance.
+  function GetVal() {
+    if (360 > screenWidth ) {
+    return calcT
+    } else if (390 > screenWidth) {
+      return 125
+    } else if (410 > screenWidth) {
+      return 123
+    } else if (430 > screenWidth) {
+      return 121
+    } else if (450 > screenWidth) {
+      return 119
+    } else if (470 > screenWidth) {
+      return 117
+    } else if (490 > screenWidth) {
+      return 114
+    } else if (510 > screenWidth) {
+      return 111
+    }else if (530 > screenWidth) {
+      return 109
+    }else if (550 > screenWidth) {
+      return 107
+    }else if (570 > screenWidth) {
+      return 105
+    }else if (590 > screenWidth) {
+      return 103
+    }else if (610 > screenWidth) {
+      return 101
+    }else if (630 > screenWidth) {
+      return 99
+    }else if (650 > screenWidth) {
+      return 98
+    }else if (670 > screenWidth) {
+      return 97
+    }else if (690 > screenWidth) {
+      return 96
+    }else if (710 > screenWidth) {
+      return 94
+    }else if (730 > screenWidth) {
+      return 92
+    }else if (750 > screenWidth) {
+      return 93
+    }else if (770 > screenWidth) {
+      return 95
+    }else if (790 > screenWidth) {
+      return 94
+    }else if (810 > screenWidth) {
+      return 93
+    }
+    return calcT
+
+  }
+
+  // console.log("final", Math.min(Math.max(GetVal(), 55), 130))
+
   return (
     <>
       <PerspectiveCamera
@@ -584,7 +660,9 @@ export default function Experience({
         theatreKey="Camera"
         makeDefault
         // fov={Math.min(Math.max(75000 / screenWidth, 70), 115)}
-        fov={Math.min(Math.max(75000 / screenWidth ** 1.001, 55), 108)}
+        // fov={Math.min(Math.max(75000 / screenWidth ** 1.001, 55), 108)}
+        // fov={Math.min(Math.max(75000 / screenWidth ** 1.001, 55), 130)}
+        fov={Math.min(Math.max(GetVal(), 55), 130)}
         position={[0, 2, 10]}
         near={0.001}
         far={55000}

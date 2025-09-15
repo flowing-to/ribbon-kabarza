@@ -103,7 +103,7 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
     const screenW = (Math.min(window.innerWidth,1100))
 
     const letterWidth = screenW / textLength;
-    console.log(letterWidth)
+    // console.log(letterWidth)
     
     // 1 at 1100, 0 at 0
     const boost = 1/ 1100 * screenW * 2
