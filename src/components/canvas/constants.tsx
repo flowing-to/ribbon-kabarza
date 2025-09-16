@@ -8,15 +8,17 @@ import { debug } from "../../config";
 
 
 
-let titlesList:{imageNum:number, img:string, title:string}[] = [];
+let titlesList:{imageNum:number, img:string, title:string, titleM:string}[] = [];
 [...document.querySelectorAll("[data-flow-ribbon-nr]")].forEach(el => {
   const imageNum = parseInt(el.getAttribute("data-flow-ribbon-nr")!)
   const title = el.getAttribute("data-flow-ribbon-text")!
+  const titleM = el.getAttribute("data-flow-ribbon-text-m")!
   const img = el.getAttribute("src")!
 
   titlesList.push({
     imageNum,
     title,
+    titleM,
     img
   })
 })
@@ -106,7 +108,7 @@ export function getLandingTextData() {
     return "fallback Text"
   }
 
-return  (el.getAttribute("data-flow-default-text")?? "fallback Text").replace("\\n", `
+return  (el.getAttribute("data-flow-default-text")?? "fallback Text").replaceAll("\\n", `
 `)
 }
 
@@ -190,8 +192,8 @@ export function useCarouselTexts() {
   const imageTexts = useMemo(() => {
     if (debug) console.log("useCarouselTexts - domReady:", domReady);
 
-    const webflowTexts: { imageNum: number; title: string }[] = [
-      { imageNum: 0, title: "FLOWING" },
+    const webflowTexts: { imageNum: number; title: string, titleM:string }[] = [
+      { imageNum: 0, title: "FLOWING", titleM:"FLOWING" },
     ];
 
     // Try to get text from DOM elements
@@ -206,7 +208,7 @@ export function useCarouselTexts() {
           : element.textContent;
         if (debug) console.log(`Text ${i}:`, textContent);
         if (textContent) {
-          webflowTexts.push({ imageNum: i, title: textContent });
+          webflowTexts.push({ imageNum: i, title: textContent, titleM: textContent });
         }
       }
     }

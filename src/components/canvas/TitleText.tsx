@@ -128,9 +128,18 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
   // Update font size on resize
   useEffect(() => {
     const handleResize = () => {
-      const currentText = imageTexts.find(
+
+      const mobile = window.innerWidth < 768
+      console.log({mobile})
+
+      const entry = imageTexts.find(
         (item) => item.imageNum === imageIndex
-      )?.title;
+      )
+
+
+
+      const currentText = (mobile ? entry?.titleM ?? "": entry?.title ?? "").replaceAll("\\n", `
+`)
       if (currentText && textRef.current) {
         if (imageIndex !== 0) {
 
@@ -153,9 +162,17 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
   }, [imageTexts, imageIndex]);
 
   useEffect(() => {
-    const imageText = imageTexts.find(
-      (item) => item.imageNum === imageIndex
-    )?.title;
+
+      const mobile = window.innerWidth < 768
+      console.log({mobile})
+
+      const entry = imageTexts.find(
+        (item) => item.imageNum === imageIndex
+      )
+      const imageText = (mobile ? entry?.titleM ?? "" : entry?.title ?? "").replaceAll("\\n", `
+`)
+
+
     // if (animationState.current !== 'idle') return // Prevent multiple animations
     if ( (!imageText && imageIndex !== 0) ||!ribbonSheet) return;
     // if(state === 'normal'){
