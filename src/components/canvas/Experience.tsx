@@ -530,7 +530,9 @@ export default function Experience({
     return res;
   }
 
-  const calcT = num / screenWidth ** 1.001 - 30 * scaleInverted(screenWidth, 200, 800);
+  // const calcT = num / screenWidth ** 1.001 - 30 * scaleInverted(screenWidth, 200, 800);
+
+  const calcT = num / screenWidth ** 1.001 - 30 * scaleInverted(screenWidth, 200, 800) - 15 * scaleInverted(screenWidth, 800, 1500);
 
   console.log(calcT, Math.min(Math.max(calcT, 55), 130));
 
