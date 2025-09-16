@@ -181,7 +181,7 @@ export default function Scene() {
           width: "calc(100vw - 14px)",
           height: "100vh",
           pointerEvents: "auto",
-          touchAction: "none",
+          touchAction: "pan-y",
           backgroundColor: "transparent",
         }}
       >
