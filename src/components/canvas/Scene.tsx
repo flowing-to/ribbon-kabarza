@@ -178,7 +178,7 @@ export default function Scene() {
           position: "fixed",
           top: 0,
           left: 0,
-          width: "100vw",
+          width: "calc(100vw - 14px)",
           height: "100vh",
           pointerEvents: "auto",
           touchAction: "none",
