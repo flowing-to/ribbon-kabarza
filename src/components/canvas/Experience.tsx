@@ -83,7 +83,7 @@ const ConstantHFovCamera = forwardRef<THREE.PerspectiveCamera, ConstantHFovCamer
 
     // Initialize baseline horizontal FOV once on mount
     useLayoutEffect(() => {
-      const aspect0 = (size.width || 1) / (size.height || 1);
+      const aspect0 = (size.width || 1) / (1000);
       if (hfov != null) {
         hFovRad.current = THREE.MathUtils.degToRad(hfov);
       } else {
@@ -595,8 +595,8 @@ export default function Experience({
         theatreKey="Camera"
         makeDefault
         // Use your existing baseline only at mount; runtime ignores subsequent fov changes.
-        // fov={Math.min(Math.max(GetVal(), 55), 130)}
         fov={Math.min(Math.max(GetVal(), 55), 130)}
+        // fov={100}
         position={[0, 2, 10]}
         near={0.001}
         far={55000}
