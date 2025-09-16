@@ -197,11 +197,41 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
               textRef.current.text = text;
                // @ts-expect-error
               textRef.current.fontSize = getFontSize(text);
+              
+              // Calculate vertical offset for main text based on line breaks
+              const lineBreakCount = (text.match(/\n/g) || []).length;
+              if (lineBreakCount >= 3) {
+                const offsetPerLineBreak = lineBreakCount - 2; // Start offsetting after 2 line breaks
+                const verticalOffset = offsetPerLineBreak * 3; // Move up 2 units per extra line break
+                if (textGroupRef.current) {
+                  textGroupRef.current.position.y = verticalOffset;
+                }
+              } else {
+                // Reset position for texts with fewer line breaks
+                if (textGroupRef.current) {
+                  textGroupRef.current.position.y = 0;
+                }
+              }
             } else {
             // @ts-expect-error
               textRef.current.text = imageText;
           // @ts-expect-error
           textRef.current.fontSize = getFontSize(...imageTexts.map(e => e.title));
+          
+          // Calculate vertical offset based on line breaks
+          const lineBreakCount = (imageText.match(/\n/g) || []).length;
+          if (lineBreakCount >= 3) {
+            const offsetPerLineBreak = lineBreakCount - 2; // Start offsetting after 2 line breaks
+            const verticalOffset = offsetPerLineBreak * 3; // Move up 2 units per extra line break
+            if (textGroupRef.current) {
+              textGroupRef.current.position.y = verticalOffset;
+            }
+          } else {
+            // Reset position for texts with fewer line breaks
+            if (textGroupRef.current) {
+              textGroupRef.current.position.y = 0;
+            }
+          }
 
             }
 
@@ -327,6 +357,11 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
       // if(currentImage.current === onAnimationImage.current){
 
       // handleImageClick(currentImage.current, 'normal')
+      setImageIndex(currentImage.current);
+    }
+    
+    // Also update when going back to an image that was previously deselected
+    if (imageIndex !== currentImage.current && ribbonSheet) {
       setImageIndex(currentImage.current);
 
       // 	console.log('normal')
