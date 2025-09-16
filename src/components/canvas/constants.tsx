@@ -108,6 +108,11 @@ export function getLandingTextData() {
     return "fallback Text"
   }
 
+  if (window.innerWidth < 500) {
+return  (el.getAttribute("data-flow-default-text-m")?? "fallback Text").replaceAll("\\n", `
+`)
+  }
+
 return  (el.getAttribute("data-flow-default-text")?? "fallback Text").replaceAll("\\n", `
 `)
 }

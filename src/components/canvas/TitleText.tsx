@@ -148,7 +148,7 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
           // @ts-expect-error
           textRef.current.fontSize = newFontSize;
         } else {
-          const newFontSize = getFontSize(text);
+          const newFontSize = getFontSize(text );
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
           textRef.current.fontSize = newFontSize;
@@ -196,13 +196,14 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
             // @ts-expect-error
               textRef.current.text = text;
                // @ts-expect-error
-              textRef.current.fontSize = getFontSize(text);
+              textRef.current.fontSize = getFontSize(text  );
               
               // Calculate vertical offset for main text based on line breaks
               const lineBreakCount = (text.match(/\n/g) || []).length;
               if (lineBreakCount >= 3) {
                 const offsetPerLineBreak = lineBreakCount - 2; // Start offsetting after 2 line breaks
-                const verticalOffset = offsetPerLineBreak * 3; // Move up 2 units per extra line break
+               // @ts-expect-error
+                const verticalOffset = offsetPerLineBreak * textRef.current.fontSize * 1.3; // Move up 2 units per extra line break
                 if (textGroupRef.current) {
                   textGroupRef.current.position.y = verticalOffset;
                 }
