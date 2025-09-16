@@ -534,54 +534,56 @@ export default function Experience({
 
   console.log(calcT, Math.min(Math.max(calcT, 55), 130));
 
+  const offS = 20
   function GetVal() {
     if (360 > screenWidth) {
       return calcT;
     } else if (390 > screenWidth) {
-      return 125;
+      return 125-offS;
     } else if (410 > screenWidth) {
-      return 123;
+      return 123-offS;
     } else if (430 > screenWidth) {
-      return 121;
+      return 121-offS;
     } else if (450 > screenWidth) {
-      return 119;
+      return 119-offS;
     } else if (470 > screenWidth) {
-      return 117;
+      return 117-offS;
     } else if (490 > screenWidth) {
-      return 114;
+      return 114-offS;
     } else if (510 > screenWidth) {
-      return 111;
+      return 111-offS;
     } else if (530 > screenWidth) {
-      return 109;
+      return 109-offS;
     } else if (550 > screenWidth) {
-      return 107;
+      return 107-offS;
     } else if (570 > screenWidth) {
-      return 105;
+      return 105-offS;
     } else if (590 > screenWidth) {
-      return 103;
+      return 103-offS;
     } else if (610 > screenWidth) {
-      return 101;
+      return 101-offS;
     } else if (630 > screenWidth) {
-      return 99;
+      return 99-offS;
     } else if (650 > screenWidth) {
-      return 98;
+      return 98-offS;
     } else if (670 > screenWidth) {
-      return 97;
+      return 97-offS;
     } else if (690 > screenWidth) {
-      return 96;
+      return 96-offS;
     } else if (710 > screenWidth) {
-      return 94;
+      return 94-offS;
     } else if (730 > screenWidth) {
-      return 92;
+      return 92-offS;
     } else if (750 > screenWidth) {
-      return 93;
+      return 93-offS;
     } else if (770 > screenWidth) {
-      return 95;
+      return 95-offS;
     } else if (790 > screenWidth) {
-      return 94;
+      return 94-offS;
     } else if (810 > screenWidth) {
-      return 93;
+      return 93-offS;
     }
+    console.log("calcT")
     return calcT;
   }
 
