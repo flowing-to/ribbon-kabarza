@@ -1,10 +1,20 @@
 "use client";
 
 import { shaderMaterial } from "@react-three/drei";
-import { Object3DNode, ThreeEvent, useFrame } from "@react-three/fiber";
+import { Object3DNode, ThreeEvent, useFrame, useThree, extend } from "@react-three/fiber";
 import { editable as e, PerspectiveCamera } from "@theatre/r3f";
 import { useIsClient } from "@uidotdev/usehooks";
-import { MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
+import {
+  MutableRefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+  useLayoutEffect,
+} from "react";
+import type { ComponentProps } from "react";
 import * as THREE from "three";
 import { Vector3 } from "three";
 import { debug } from "../../config";
@@ -27,7 +37,6 @@ import vertex from "../../glsl/shading/vertex.glsl";
 // @ts-expect-error
 import fragment from "../../glsl/shading/fragment.glsl";
 import { useCarouselStore } from "../../lib/store/useCarouselStore";
-import { extend } from "@react-three/fiber";
 import { easing } from "maath";
 import { MathUtils } from "three";
 import { extendBentPlane } from "./BentPlaneGeometry";
@@ -51,14 +60,66 @@ import TitleText from "./TitleText";
 
 extendBentPlane();
 
+/** ---------- Camera with constant horizontal FOV ---------- */
+type TheatrePerspectiveProps = ComponentProps<typeof PerspectiveCamera>;
+type ConstantHFovCameraProps = Omit<TheatrePerspectiveProps, "fov"> & {
+  /** Optional baseline vertical FOV (deg) used only at mount to compute constant hFOV */
+  fov?: number;
+  /** Optional explicit baseline horizontal FOV (deg). If provided, overrides `fov` baseline. */
+  hfov?: number;
+};
+
+/**
+ * Keeps horizontal field-of-view constant, regardless of canvas height or any external writes to `camera.fov`.
+ * This makes the camera effectively independent of vertical FOV animations or prop changes.
+ */
+const ConstantHFovCamera = forwardRef<THREE.PerspectiveCamera, ConstantHFovCameraProps>(
+  function ConstantHFovCamera({ hfov, fov = 50, ...rest }, ref) {
+    const { size } = useThree();
+    const cam = useRef<THREE.PerspectiveCamera>(null!);
+    useImperativeHandle(ref, () => cam.current);
+
+    const hFovRad = useRef<number | null>(null);
+
+    // Initialize baseline horizontal FOV once on mount
+    useLayoutEffect(() => {
+      const aspect0 = (size.width || 1) / (size.height || 1);
+      if (hfov != null) {
+        hFovRad.current = THREE.MathUtils.degToRad(hfov);
+      } else {
+        const v0 = THREE.MathUtils.degToRad(fov);
+        hFovRad.current = 2 * Math.atan(Math.tan(v0 / 2) * aspect0);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Force vertical FOV derived from constant horizontal FOV every frame
+    useFrame(() => {
+      if (!cam.current || hFovRad.current == null) return;
+      const aspect = (size.width || 1) / (size.height || 1);
+      const v = 2 * Math.atan(Math.tan(hFovRad.current / 2) / aspect);
+      const vDeg = THREE.MathUtils.radToDeg(v);
+      if (Math.abs(cam.current.fov - vDeg) > 1e-3 || cam.current.aspect !== aspect) {
+        cam.current.fov = vDeg;
+        cam.current.aspect = aspect;
+        cam.current.updateProjectionMatrix();
+      }
+    });
+
+    // Do NOT pass fov to the underlying theatre camera; we control it above.
+    return <PerspectiveCamera ref={cam} {...rest} />;
+  }
+);
+
+/** ---------- Shader materials ---------- */
 const RibbonShaderMaterial = shaderMaterial(
   {
     uTime: 0,
     uColor: new THREE.Color(0.2, 0.0, 0.1),
     uSpatialTexture: new THREE.DataTexture(),
     uTextureSize: new THREE.Vector2(0, 0),
-    uLengthRatio: 0, // more or less real lenght along the path
-    uObjSize: new Vector3(0), // lenght
+    uLengthRatio: 0,
+    uObjSize: new Vector3(0),
     uOffset: -0.5,
     uTwistAmt: 0.1,
     uLightDirection: new Vector3(-0.5, 0.2, 0.5),
@@ -90,10 +151,7 @@ interface IRibbonShaderMaterial extends THREE.ShaderMaterial {
 
 declare module "@react-three/fiber" {
   interface ThreeElements {
-    ribbonShaderMaterial: Object3DNode<
-      IRibbonShaderMaterial,
-      typeof RibbonShaderMaterial
-    >;
+    ribbonShaderMaterial: Object3DNode<IRibbonShaderMaterial, typeof RibbonShaderMaterial>;
   }
 }
 
@@ -128,16 +186,12 @@ export interface IimageShaderMaterial extends THREE.ShaderMaterial {
 
 declare module "@react-three/fiber" {
   interface ThreeElements {
-    imageShaderMaterial: Object3DNode<
-      IimageShaderMaterial,
-      typeof ImageShaderMaterial
-    >;
+    imageShaderMaterial: Object3DNode<IimageShaderMaterial, typeof ImageShaderMaterial>;
   }
 }
 
 const SphereShaderMaterial = shaderMaterial(
   {
-    // uTime: 0,
     uColor: new THREE.Color("#d8d8d8"),
   },
   vertex,
@@ -152,13 +206,11 @@ interface ISphereShaderMaterial extends THREE.ShaderMaterial {
 
 declare module "@react-three/fiber" {
   interface ThreeElements {
-    sphereShaderMaterial: Object3DNode<
-      ISphereShaderMaterial,
-      typeof SphereShaderMaterial
-    >;
+    sphereShaderMaterial: Object3DNode<ISphereShaderMaterial, typeof SphereShaderMaterial>;
   }
 }
 
+/** ---------- Experience ---------- */
 type ExperienceProps = {
   progressRef: MutableRefObject<number>;
   timeRef: MutableRefObject<number>;
@@ -174,14 +226,12 @@ export default function Experience({
 }: ExperienceProps) {
   const isClient = useIsClient();
 
-  const text = useMemo(() => getLandingTextData(), [])
+  const text = useMemo(() => getLandingTextData(), []);
 
   const lookAtTarget = new THREE.Vector3(0, 0, 0);
   const cameraLookAtRef = useRef<THREE.Mesh>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
-  const [ribbonMat, setRibbonMat] = useState<IRibbonShaderMaterial | null>(
-    null
-  );
+  const [ribbonMat, setRibbonMat] = useState<IRibbonShaderMaterial | null>(null);
   const planeRef = useRef<THREE.Mesh>(null);
   const carouselRef = useRef<THREE.Group>(null);
   const setCurrentText = useCarouselStore((state) => state.setCurrentText);
@@ -205,12 +255,10 @@ export default function Experience({
   const { momentum, wasAtCarousel } = useMomentum();
 
   const curve = useMemo(
-    () =>
-      new THREE.CatmullRomCurve3([...baseCurvePoints], false, "chordal", 0.5),
+    () => new THREE.CatmullRomCurve3([...baseCurvePoints], false, "chordal", 0.5),
     []
   );
 
-  // derive the progress thresholds…
   const curveSegments = curve.points.length * 10;
   const totalLen = curve.getLength() * progressLength;
   const startLen = curve.getLengths(curveSegments)[10 * 13] * progressLength;
@@ -224,19 +272,17 @@ export default function Experience({
     if (!ribbonMat || !planeRef.current) return;
 
     const geo = planeRef.current.geometry;
-    // compute size
     const posAttr = geo.getAttribute("position") as THREE.BufferAttribute;
     const box = new THREE.Box3().setFromBufferAttribute(posAttr);
     const size = new THREE.Vector3();
     box.getSize(size);
-    // assign every uniform once
+
     ribbonMat.uSpatialTexture = tex;
     ribbonMat.uTextureSize = new THREE.Vector2(numPoints + 1, 4);
     ribbonMat.uLengthRatio = size.z / curve.getLength();
     ribbonMat.uObjSize = size;
     ribbonMat.uFabricTexture = col;
     ribbonMat.uFabricTextureNormal = normal;
-    // mark update if you want
     ribbonMat.needsUpdate = true;
   }, [ribbonMat, tex, curve, col, normal]);
 
@@ -247,37 +293,21 @@ export default function Experience({
   const axis = new THREE.Vector3(-0.1, -1, -0.0).normalize();
   const anglePer = (2 * Math.PI) / carouselCount;
   const baseQ = new THREE.Quaternion().setFromEuler(initialEuler);
-  // const currentAngle = useRef(0)
-
-  // const incrementQuaternion = new THREE.Quaternion()
-  const targetQuaternionContinuous = useRef(
-    new THREE.Quaternion().setFromEuler(initialEuler)
-  );
+  const targetQuaternionContinuous = useRef(new THREE.Quaternion().setFromEuler(initialEuler));
 
   const handleCarouselClick = (idx: number) => {
     if (!checkClick.current) return;
     dragMomentum.current = 0;
-    // hovered.current = true
-    // if(currentImage.current !== idx + 1){
-    // 	rotationDone.current = false
-    // }
-    // angle so that slice #idx lands at front (angle=0)
-    // the front image at inital position is image #6 ( 6-1 = 5)
+
     const targetAngle = anglePer * (5 - idx) + Math.PI / 36;
-    const targetQ = new THREE.Quaternion()
-      .setFromAxisAngle(axis, targetAngle)
-      .multiply(baseQ);
-    // check if selected image is not at the front position
-    if (
-      carouselRef.current &&
-      carouselRef.current.quaternion.angleTo(targetQ) > 0.1
-    ) {
+    const targetQ = new THREE.Quaternion().setFromAxisAngle(axis, targetAngle).multiply(baseQ);
+
+    if (carouselRef.current && carouselRef.current.quaternion.angleTo(targetQ) > 0.1) {
       if (rotationDone.current) {
         targetQuaternion.current = targetQ;
         currentImage.current = idx + 1;
         lastClickedImage.current = idx + 1;
       }
-
       frontImageCheck.current = false;
     } else {
       frontImageCheck.current = true;
@@ -288,14 +318,10 @@ export default function Experience({
 
   useEffect(() => {
     const handlePointerUp = () => {
-      // find out the direction of the swipe
       if (pointerDown.current && !clicked.current) {
         pointerUp.current = true;
         const momentumDir = pointerVelocity.current > 0 ? -1 : 1;
-        // Set momentum based on last pointer velocity
-        momentum.current =
-          momentumDir *
-          MathUtils.clamp(Math.abs(pointerVelocity.current) * 2, 0.3, 10);
+        momentum.current = momentumDir * MathUtils.clamp(Math.abs(pointerVelocity.current) * 2, 0.3, 10);
         pointerDown.current = false;
       }
     };
@@ -314,43 +340,35 @@ export default function Experience({
   const clickObserver = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (!pointerUp.current) dragMomentum.current = 0;
-    if (debug) console.log('Click outside detected, currentImage:', currentImage.current);
-    
-    // Reset to FLOWING text when clicking outside the carousel
+    if (debug) console.log("Click outside detected, currentImage:", currentImage.current);
+
     if (currentImage.current !== 0) {
-      if (typeof window !== 'undefined') {
-        window.offFlowingClick?.forEach(e => e(lastClickedImage.current));
+      if (typeof window !== "undefined") {
+        window.offFlowingClick?.forEach((e) => e(lastClickedImage.current));
       }
       currentImage.current = 0;
-      if (debug) console.log('Reset to FLOWING');
+      if (debug) console.log("Reset to FLOWING");
     }
   };
 
-  // const velocityQuanternion = new THREE.Quaternion()
   const tempVelocityQuanternion = new THREE.Quaternion();
   const rotatingCarouselQuanternion = new THREE.Quaternion();
   const defaultMomentum = useRef(0);
   const dragMomentum = useRef(0);
   const firstPointerDown = useRef(false);
-  // const targetEuler = useRef(new THREE.Euler(0, 0, -0.1))
-  const setIsCarouselReady = useCarouselStore(
-    (state) => state.setIsCarouselReady
-  );
+  const setIsCarouselReady = useCarouselStore((state) => state.setIsCarouselReady);
 
   const dxLerp = useRef(0);
   const prevDx = useRef(0);
 
-  // Handle all updates in useFrame
   useFrame((state, delta) => {
-    // let currentDampedOffset = ribbonMat ? ribbonMat.uOffset : -0.5 // Get current or initial
     const isRibbonAtCarousel = progressRef.current >= carouselStartPoint;
 
     if (planeRef.current) {
       if (progressRef.current >= 0.9) {
-        
         if (planeRef.current) {
           setIsCarouselReady(true);
-        };
+        }
         planeRef.current.visible = false;
       } else {
         planeRef.current.visible = true;
@@ -363,16 +381,16 @@ export default function Experience({
       setCurrentText(0);
     }
 
-    const ribbonEndThreshold = 0.9
+    const ribbonEndThreshold = 0.9;
     if (progressRef.current >= ribbonEndThreshold && ribbonEndFired.current == false && progressRef.current !== 1.5) {
       ribbonEndFired.current = true;
-      if (typeof window !== 'undefined') {
-        window.onFlowingRibbonEnd?.forEach(e => e());
+      if (typeof window !== "undefined") {
+        window.onFlowingRibbonEnd?.forEach((e) => e());
       }
     }
 
     if (cameraRef.current && cameraLookAtRef.current) {
-      cameraRef.current.position.y = -yOffset/2.9
+      cameraRef.current.position.y = -yOffset / 2.9;
       cameraRef.current.lookAt(cameraLookAtRef.current.position);
     }
 
@@ -391,7 +409,7 @@ export default function Experience({
         );
       }
     }
-    // When ribbon reaches the carousel, add momentum
+
     if (!wasAtCarousel.current) {
       momentum.current += MOMENTUM_BOOST;
       defaultMomentum.current = momentum.current;
@@ -402,21 +420,10 @@ export default function Experience({
       if (!isRibbonAtCarousel) {
         carouselRef.current.quaternion.setFromEuler(initialEuler);
       } else {
-        // if the momentum is getting from the grabbing function the decay should be more powerfull
-        // momentum.current *= pointerVelocity.current === 0 ? MOMENTUM_DECAY : (MOMENTUM_DECAY - 0.02)
-        // const defaultMomentum = MathUtils.lerp(momentum.current, 0, delta * 3 )
-
         easing.damp(defaultMomentum, "current", 0, 2.1, 0.01);
-
-        // const dragMomentum = MathUtils.lerp(momentum.current, 0, delta * 3  )
-        // dragMomentum.current = momentum.current
         easing.damp(dragMomentum, "current", 0, 1.2, 0.01);
 
-        momentum.current =
-          pointerVelocity.current === 0
-            ? defaultMomentum.current
-            : dragMomentum.current;
-
+        momentum.current = pointerVelocity.current === 0 ? defaultMomentum.current : dragMomentum.current;
         momentum.current =
           momentum.current > 0
             ? Math.max(0, MathUtils.clamp(momentum.current, 0.0, 28))
@@ -424,89 +431,41 @@ export default function Experience({
 
         carouselSpeed.current = BASE_SPEED + momentum.current;
 
-        if (
-          hovered.current &&
-          !clicked.current &&
-          carouselSpeed.current < BASE_SPEED + 2
-        ) {
-          carouselSpeed.current = MathUtils.damp(
-            carouselSpeed.current,
-            0,
-            70,
-            delta
-          );
-          // easing.damp(carouselSpeed, 'current', -1, 0.1, 0.01, 0.02)
-          // easing.dampQ(carouselRef.current.quaternion, targetQuaternionContinuous.current, 0.01, 0.01)
+        if (hovered.current && !clicked.current && carouselSpeed.current < BASE_SPEED + 2) {
+          carouselSpeed.current = MathUtils.damp(carouselSpeed.current, 0, 70, delta);
         }
         if (targetQuaternion.current) {
           clicked.current = true;
-          // carouselRef.current.quaternion.rotateTowards(
-          // 	targetQuaternion.current,
-          // 	carouselSpeed.current * 10 * delta
-          // )
-          // carouselRef.current.quaternion.slerpQuaternions(carouselRef.current.quaternion, targetQuaternion.current, delta * 3)
-          easing.dampQ(
-            carouselRef.current.quaternion,
-            targetQuaternion.current
-          );
 
-          if (
-            carouselRef.current.quaternion.angleTo(targetQuaternion.current) <
-            0.2
-          ) {
+          easing.dampQ(carouselRef.current.quaternion, targetQuaternion.current);
+
+          if (carouselRef.current.quaternion.angleTo(targetQuaternion.current) < 0.2) {
             rotationDone.current = true;
             clicked.current = false;
           } else {
             rotationDone.current = false;
           }
 
-          // once “close enough”, clear it and resume auto‑spin
-          if (
-            carouselRef.current.quaternion.angleTo(targetQuaternion.current) <
-            0.001
-          ) {
+          if (carouselRef.current.quaternion.angleTo(targetQuaternion.current) < 0.001) {
             targetQuaternionContinuous.current = targetQuaternion.current;
             targetQuaternion.current = null;
           }
           return;
         } else {
-          // const clampedDelta = Math.min(delta, 1 / 30)
-          if (
-            !pointerDown.current &&
-            !pointerUp.current &&
-            currentImage.current === 0
-          ) {
-            // Create incremental rotation
-            rotatingCarouselQuanternion.setFromAxisAngle(
-              axis,
-              carouselSpeed.current * delta
-            );
+          if (!pointerDown.current && !pointerUp.current && currentImage.current === 0) {
+            rotatingCarouselQuanternion.setFromAxisAngle(axis, carouselSpeed.current * delta);
 
-            // Apply to target quaternion
             targetQuaternionContinuous.current.multiplyQuaternions(
               rotatingCarouselQuanternion,
               targetQuaternionContinuous.current
             );
 
-            // Smooth interpolation
-            easing.dampQ(
-              carouselRef.current.quaternion,
-              targetQuaternionContinuous.current,
-              0.1,
-              0.01
-            );
-            // lastPointerX.current = state.pointer.x
-          } else if (
-            pointerDown.current &&
-            !pointerUp.current &&
-            !clicked.current &&
-            currentImage.current === 0
-          ) {
+            easing.dampQ(carouselRef.current.quaternion, targetQuaternionContinuous.current, 0.1, 0.01);
+          } else if (pointerDown.current && !pointerUp.current && !clicked.current && currentImage.current === 0) {
             if (!firstPointerDown.current) {
               lastPointerX.current = state.pointer.x;
               firstPointerDown.current = true;
             } else {
-              // Calculate velocity
               const now = performance.now();
               const dx = state.pointer.x - lastPointerX.current;
 
@@ -515,8 +474,7 @@ export default function Experience({
               } else {
                 checkClick.current = true;
               }
-              const dt = (now - lastPointerTime.current) / 5000; // seconds
-              // const dt = delta
+              const dt = (now - lastPointerTime.current) / 5000;
 
               if (Math.abs(prevDx.current) >= Math.abs(dx)) {
                 easing.damp(dxLerp, "current", dx, 1.5, 0.01);
@@ -532,28 +490,16 @@ export default function Experience({
               lastPointerX.current = state.pointer.x;
               lastPointerTime.current = now;
 
-              tempVelocityQuanternion.setFromAxisAngle(
-                axis,
-                -dxLerp.current * 1.2
-              );
-              // console.log('dx', dxLerp.current)
+              tempVelocityQuanternion.setFromAxisAngle(axis, -dxLerp.current * 1.2);
               targetQuaternionContinuous.current.multiplyQuaternions(
                 tempVelocityQuanternion,
                 targetQuaternionContinuous.current
               );
 
-              easing.dampQ(
-                carouselRef.current.quaternion,
-                targetQuaternionContinuous.current,
-                0.1,
-                0.01
-              );
+              easing.dampQ(carouselRef.current.quaternion, targetQuaternionContinuous.current, 0.1, 0.01);
             }
             if (pointerDown.current && !clicked.current) {
-              // Set momentum based on last pointer velocity
-
               dragMomentum.current = -pointerVelocity.current;
-              // console.log('velocity', -pointerVelocity.current)
               dragMomentum.current =
                 dragMomentum.current > 0
                   ? Math.max(0, MathUtils.clamp(dragMomentum.current, 0.0, 4))
@@ -564,14 +510,6 @@ export default function Experience({
             easing.damp(dxLerp, "current", 0, 0.05, 0.01);
             pointerUp.current = false;
           }
-          // if (currentImage.current === 0) {
-          // carouselRef.current.quaternion.multiplyQuaternions(
-          // 	incrementQuaternion,
-          // 	carouselRef.current.quaternion
-          // )
-          // easing.dampQ(carouselRef.current.quaternion, incrementQuaternion)
-          // carouselRef.current.quaternion.slerpQuaternions(carouselRef.current.quaternion, rotatingCarouselQuanternion, delta )
-          // }
         }
       }
     }
@@ -579,121 +517,96 @@ export default function Experience({
 
   if (!isClient) return null;
 
-  const num = 75000
+  // Keep your existing width-based baseline only for initial mount; runtime FOV is locked to constant hFOV.
+  const num = 75000;
 
-   const scale = (x: number): number =>
+  const scale = (x: number): number => Math.max(0, Math.min(1, 1 - x / 1000));
 
-
-
-    Math.max(0, Math.min(1, 1 - x / 1000));
-
-   function scaleInverted(x = 0, a = 0, b = 1000) {
-  if (a === b) throw new Error("a and b must differ");
-  const t = (b - x) / (b - a);        // 1 at x=a, 0 at x=b
-  const res = Math.max(0, Math.min(1, t))
-  console.log({res})
-  return res
-}
-
-  // const calc = num / screenWidth ** 1.001 + 10 * scaleInverted(screenWidth,1000,200)
-  const calcT = (num / screenWidth ** 1.001) - 30 * scaleInverted(screenWidth,200,800)
-
-  console.log(calcT, Math.min(Math.max(calcT, 55), 130))
-
-  //I hate that kabarza forced me to do this. It's the result of his existance.
-  function GetVal() {
-    if (360 > screenWidth ) {
-    return calcT
-    } else if (390 > screenWidth) {
-      return 125
-    } else if (410 > screenWidth) {
-      return 123
-    } else if (430 > screenWidth) {
-      return 121
-    } else if (450 > screenWidth) {
-      return 119
-    } else if (470 > screenWidth) {
-      return 117
-    } else if (490 > screenWidth) {
-      return 114
-    } else if (510 > screenWidth) {
-      return 111
-    }else if (530 > screenWidth) {
-      return 109
-    }else if (550 > screenWidth) {
-      return 107
-    }else if (570 > screenWidth) {
-      return 105
-    }else if (590 > screenWidth) {
-      return 103
-    }else if (610 > screenWidth) {
-      return 101
-    }else if (630 > screenWidth) {
-      return 99
-    }else if (650 > screenWidth) {
-      return 98
-    }else if (670 > screenWidth) {
-      return 97
-    }else if (690 > screenWidth) {
-      return 96
-    }else if (710 > screenWidth) {
-      return 94
-    }else if (730 > screenWidth) {
-      return 92
-    }else if (750 > screenWidth) {
-      return 93
-    }else if (770 > screenWidth) {
-      return 95
-    }else if (790 > screenWidth) {
-      return 94
-    }else if (810 > screenWidth) {
-      return 93
-    }
-    return calcT
-
+  function scaleInverted(x = 0, a = 0, b = 1000) {
+    if (a === b) throw new Error("a and b must differ");
+    const t = (b - x) / (b - a);
+    const res = Math.max(0, Math.min(1, t));
+    console.log({ res });
+    return res;
   }
 
-  // console.log("final", Math.min(Math.max(GetVal(), 55), 130))
+  const calcT = num / screenWidth ** 1.001 - 30 * scaleInverted(screenWidth, 200, 800);
+
+  console.log(calcT, Math.min(Math.max(calcT, 55), 130));
+
+  function GetVal() {
+    if (360 > screenWidth) {
+      return calcT;
+    } else if (390 > screenWidth) {
+      return 125;
+    } else if (410 > screenWidth) {
+      return 123;
+    } else if (430 > screenWidth) {
+      return 121;
+    } else if (450 > screenWidth) {
+      return 119;
+    } else if (470 > screenWidth) {
+      return 117;
+    } else if (490 > screenWidth) {
+      return 114;
+    } else if (510 > screenWidth) {
+      return 111;
+    } else if (530 > screenWidth) {
+      return 109;
+    } else if (550 > screenWidth) {
+      return 107;
+    } else if (570 > screenWidth) {
+      return 105;
+    } else if (590 > screenWidth) {
+      return 103;
+    } else if (610 > screenWidth) {
+      return 101;
+    } else if (630 > screenWidth) {
+      return 99;
+    } else if (650 > screenWidth) {
+      return 98;
+    } else if (670 > screenWidth) {
+      return 97;
+    } else if (690 > screenWidth) {
+      return 96;
+    } else if (710 > screenWidth) {
+      return 94;
+    } else if (730 > screenWidth) {
+      return 92;
+    } else if (750 > screenWidth) {
+      return 93;
+    } else if (770 > screenWidth) {
+      return 95;
+    } else if (790 > screenWidth) {
+      return 94;
+    } else if (810 > screenWidth) {
+      return 93;
+    }
+    return calcT;
+  }
 
   return (
     <>
-      <PerspectiveCamera
+      {/* Camera: constant horizontal FOV, independent of vertical fov changes */}
+      <ConstantHFovCamera
         ref={cameraRef}
         theatreKey="Camera"
         makeDefault
-        // fov={Math.min(Math.max(75000 / screenWidth, 70), 115)}
-        // fov={Math.min(Math.max(75000 / screenWidth ** 1.001, 55), 108)}
-        // fov={Math.min(Math.max(75000 / screenWidth ** 1.001, 55), 130)}
+        // Use your existing baseline only at mount; runtime ignores subsequent fov changes.
         fov={Math.min(Math.max(GetVal(), 55), 130)}
         position={[0, 2, 10]}
         near={0.001}
         far={55000}
       />
 
-      <e.mesh
-        theatreKey="lookAt"
-        ref={cameraLookAtRef}
-        position={lookAtTarget}
-        visible={false}
-      >
+      <e.mesh theatreKey="lookAt" ref={cameraLookAtRef} position={lookAtTarget} visible={false}>
         <boxGeometry args={[0.2, 0.2, 0.2]} />
         <meshBasicMaterial color="hotpink" />
       </e.mesh>
 
-      {/* <mesh>
-				<sphereGeometry args={[500, 200, 200]} />
-				<sphereShaderMaterial key={SphereShaderMaterial.key} side={THREE.BackSide} />
-			</mesh> */}
-
       <mesh position={[0, 0, 70]} onClick={(e) => clickObserver(e)}>
         <planeGeometry args={[3000, 3000, 1, 1]} />
-        <meshBasicMaterial
-          color={"transparent"}
-          side={THREE.DoubleSide}
-          transparent
-          opacity={0}
-          alphaTest={0.001}
-        />
+        <meshBasicMaterial color={"transparent"} side={THREE.DoubleSide} transparent opacity={0} alphaTest={0.001} />
       </mesh>
 
       {/* ribbon */}
@@ -701,93 +614,52 @@ export default function Experience({
         <boxGeometry
           args={[8, 180, 0.4, 10, 1000]}
           onUpdate={(geo) => {
-            // runs once on mount (and again on HMR)
             geo.rotateX(-Math.PI / 2);
             geo.translate(0, 0, 90);
-            // ensure the positions get re‑uploaded
             geo.attributes.position.needsUpdate = true;
           }}
         />
-        <ribbonShaderMaterial
-          ref={setRibbonMat}
-          key={RibbonShaderMaterial.key}
-          side={THREE.DoubleSide}
-          blending={THREE.NormalBlending}
-          transparent
-        />
+        <ribbonShaderMaterial ref={setRibbonMat} key={RibbonShaderMaterial.key} side={THREE.DoubleSide} blending={THREE.NormalBlending} transparent />
       </mesh>
 
-      {/* <CatmullRomLine
-				points={cPoints}
-				closed={false}
-				curveType="centripetal"
-				tension={0.9}
-				color="white"
-				lineWidth={2}
-				dashed={false}
-			/> */}
-
-      {/* carousel  */}
+      {/* carousel */}
       <group ref={carouselRef} rotation={initialEuler}>
         {new Array(carouselCount).fill(undefined).map((_, i) => {
           return (
-          <CarouselImage
-            key={i}
-            position={[
-              Math.sin(
-                ((carouselCount - 1 - i) / carouselCount) * Math.PI * 2
-              ) * carouselRadius,
-              // 15,
-              15 - yOffset,
-              Math.cos(
-                ((carouselCount - 1 - i) / carouselCount) * Math.PI * 2
-              ) * carouselRadius,
-            ]}
-            rotation={[
-              0,
-              2 * Math.PI +
-                ((carouselCount - 1 - i) / carouselCount) * Math.PI * 2,
-              0,
-            ]}
-            index={i}
-            carouselStart={carouselStartPoint}
-            carouselEmergence={carouselEmergingLength}
-            carouselCount={carouselCount}
-            progressRef={progressRef}
-            timeRef={timeRef}
-            imageTexture={imageTextures[i]}
-            shaderRef={(el) => {
-              imageShaderRefs.current[i] = el;
-            }}
-            hovered={hovered}
-            onClick={() => handleCarouselClick(i)}
-            pointerDown={pointerDown}
-            pointerUp={pointerUp}
-            momentum={momentum}
-            currentImage={currentImage}
-            rotationDone={rotationDone}
-            frontImageCheck={frontImageCheck}
-            isAnimating={isAnimating}
-            carouselSpeed={carouselSpeed}
-          />
-        )})}
+            <CarouselImage
+              key={i}
+              position={[
+                Math.sin(((carouselCount - 1 - i) / carouselCount) * Math.PI * 2) * carouselRadius,
+                15 - yOffset,
+                Math.cos(((carouselCount - 1 - i) / carouselCount) * Math.PI * 2) * carouselRadius,
+              ]}
+              rotation={[0, 2 * Math.PI + ((carouselCount - 1 - i) / carouselCount) * Math.PI * 2, 0]}
+              index={i}
+              carouselStart={carouselStartPoint}
+              carouselEmergence={carouselEmergingLength}
+              carouselCount={carouselCount}
+              progressRef={progressRef}
+              timeRef={timeRef}
+              imageTexture={imageTextures[i]}
+              shaderRef={(el) => {
+                imageShaderRefs.current[i] = el;
+              }}
+              hovered={hovered}
+              onClick={() => handleCarouselClick(i)}
+              pointerDown={pointerDown}
+              pointerUp={pointerUp}
+              momentum={momentum}
+              currentImage={currentImage}
+              rotationDone={rotationDone}
+              frontImageCheck={frontImageCheck}
+              isAnimating={isAnimating}
+              carouselSpeed={carouselSpeed}
+            />
+          );
+        })}
       </group>
 
-      <TitleText
-        timeRef={timeRef}
-        currentImage={currentImage}
-        isMobile={isMobile}
-        screenWidth={screenWidth}
-        text={text}
-      />
-
-      {/* <OrbitControls /> */}
-      {/* <GizmoHelper
-				alignment="bottom-right" // widget alignment within scene
-				margin={[80, 80]} // widget margins (X, Y)
-			>
-				<GizmoViewport axisColors={['red', 'green', 'blue']} labelColor="black" />
-			</GizmoHelper> */}
+      <TitleText timeRef={timeRef} currentImage={currentImage} isMobile={isMobile} screenWidth={screenWidth} text={text} />
     </>
   );
 }
