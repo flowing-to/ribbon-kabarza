@@ -534,7 +534,7 @@ export default function Experience({
 
   console.log(calcT, Math.min(Math.max(calcT, 55), 130));
 
-  const offS = 20
+  const offS = 10
   function GetVal() {
     if (360 > screenWidth) {
       return calcT;
@@ -595,6 +595,7 @@ export default function Experience({
         theatreKey="Camera"
         makeDefault
         // Use your existing baseline only at mount; runtime ignores subsequent fov changes.
+        // fov={Math.min(Math.max(GetVal(), 55), 130)}
         fov={Math.min(Math.max(GetVal(), 55), 130)}
         position={[0, 2, 10]}
         near={0.001}
