@@ -13,7 +13,7 @@ import textVertex from "../../glsl/text/textVertex.glsl";
 // @ts-expect-error
 import textFragment from "../../glsl/text/textFragment.glsl";
 import { easing } from "maath";
-import { useCarouselTexts, yOffset } from "./constants";
+import { useCarouselTexts, yOffset, useStableFontSize, MOBILE_BREAKPOINT } from "./constants";
 
 export const TextShaderMaterial = shaderMaterial(
   {
@@ -91,79 +91,56 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
   const [imageIndex, setImageIndex] = useState(0);
 
   const { imageTexts } = useCarouselTexts();
+  const { getFontSize, isMobileLayout } = useStableFontSize();
   // console.log(imageTexts)
 
   const animationState = useRef<
     "idle" | "first-chunk" | "text-change" | "second-chunk"
   >("idle");
 
-  function getFontSize(...text:string[]) {
-    const textLength = text.join("\n").split("\n").map(e => e.trim()).sort((a,b) => b.length-a.length)[0].length
 
-    const screenW = (Math.min(window.innerWidth,1100))
-
-    const letterWidth = screenW / textLength;
-    // console.log(letterWidth)
-    
-    // 1 at 1100, 0 at 0
-    const boost = 1/ 1100 * screenW * 2
-    // console.log(boost)
-
-    //average
-    const pixelUnitToFont = 5.8
-    //6 good
-    
-    let finalSize = (letterWidth * ((3 - boost))) / pixelUnitToFont 
-    
-    // const finalSize = Math.min(
-    //   Math.max(Math.floor(letterWidth), 10),
-    //   30
-    // );
-    // if (debug) console.log(finalSize, Math.floor(letterWidth / pixelUnitToFont));
-    
-    // if (debug) console.log({finalSize})
-    return Math.floor(finalSize);
-  }
-
-  // Update font size on resize
+  // Update font size on resize (only on desktop)
   useEffect(() => {
     const handleResize = () => {
+      // Skip resize handling on mobile to prevent flickering
+      if (window.innerWidth < MOBILE_BREAKPOINT) {
+        return;
+      }
 
-      const mobile = window.innerWidth < 768
-      console.log({mobile})
+      const mobile = window.innerWidth < MOBILE_BREAKPOINT;
+      console.log({mobile});
 
       const entry = imageTexts.find(
         (item) => item.imageNum === imageIndex
-      )
-
-
+      );
 
       const currentText = (mobile ? entry?.titleM ?? "": entry?.title ?? "").replaceAll("\\n", `
-`)
+`);
       if (currentText && textRef.current) {
         if (imageIndex !== 0) {
-
           const newFontSize = getFontSize(...imageTexts.map(e => e.title));
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
           textRef.current.fontSize = newFontSize;
         } else {
-          const newFontSize = getFontSize(text );
+          const newFontSize = getFontSize(text);
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
           textRef.current.fontSize = newFontSize;
-
         }
       }
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [imageTexts, imageIndex]);
+    // Only add resize listener on desktop
+    if (window.innerWidth >= MOBILE_BREAKPOINT) {
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }
+  }, [imageTexts, imageIndex, getFontSize, text]);
 
   useEffect(() => {
 
-      const mobile = window.innerWidth < 768
+      const mobile = window.innerWidth < MOBILE_BREAKPOINT
       console.log({mobile})
 
       const entry = imageTexts.find(

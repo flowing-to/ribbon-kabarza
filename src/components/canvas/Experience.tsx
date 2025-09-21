@@ -54,6 +54,7 @@ import {
   useFrenetDataTexture,
   useLinenTextures,
   useMomentum,
+  useStableCameraFOV,
   yOffset,
 } from "./constants";
 import TitleText from "./TitleText";
@@ -253,6 +254,7 @@ export default function Experience({
   const { col, normal } = useLinenTextures();
   const { imageTextures, imageShaderRefs } = useCarouselImages();
   const { momentum, wasAtCarousel } = useMomentum();
+  const { getCameraFOV } = useStableCameraFOV();
 
   const curve = useMemo(
     () => new THREE.CatmullRomCurve3([...baseCurvePoints], false, "chordal", 0.5),
@@ -517,77 +519,8 @@ export default function Experience({
 
   if (!isClient) return null;
 
-  // Keep your existing width-based baseline only for initial mount; runtime FOV is locked to constant hFOV.
-  const num = 75000;
-
-  const scale = (x: number): number => Math.max(0, Math.min(1, 1 - x / 1000));
-
-  function scaleInverted(x = 0, a = 0, b = 1000) {
-    if (a === b) throw new Error("a and b must differ");
-    const t = (b - x) / (b - a);
-    const res = Math.max(0, Math.min(1, t));
-    console.log({ res });
-    return res;
-  }
-
-  // const calcT = num / screenWidth ** 1.001 - 30 * scaleInverted(screenWidth, 200, 800);
-
-  const calcT = num / screenWidth ** 1.001 - 30 * scaleInverted(screenWidth, 200, 800) - 15 * scaleInverted(screenWidth, 800, 1500);
-
-  console.log(calcT, Math.min(Math.max(calcT, 55), 130));
-
-  const offS = 10
-  function GetVal() {
-    if (360 > screenWidth) {
-      return calcT;
-    } else if (390 > screenWidth) {
-      return 125-offS;
-    } else if (410 > screenWidth) {
-      return 123-offS;
-    } else if (430 > screenWidth) {
-      return 121-offS;
-    } else if (450 > screenWidth) {
-      return 119-offS;
-    } else if (470 > screenWidth) {
-      return 117-offS;
-    } else if (490 > screenWidth) {
-      return 114-offS;
-    } else if (510 > screenWidth) {
-      return 111-offS;
-    } else if (530 > screenWidth) {
-      return 109-offS;
-    } else if (550 > screenWidth) {
-      return 107-offS;
-    } else if (570 > screenWidth) {
-      return 105-offS;
-    } else if (590 > screenWidth) {
-      return 103-offS;
-    } else if (610 > screenWidth) {
-      return 101-offS;
-    } else if (630 > screenWidth) {
-      return 99-offS;
-    } else if (650 > screenWidth) {
-      return 98-offS;
-    } else if (670 > screenWidth) {
-      return 97-offS;
-    } else if (690 > screenWidth) {
-      return 96-offS;
-    } else if (710 > screenWidth) {
-      return 94-offS;
-    } else if (730 > screenWidth) {
-      return 92-offS;
-    } else if (750 > screenWidth) {
-      return 93-offS;
-    } else if (770 > screenWidth) {
-      return 95-offS;
-    } else if (790 > screenWidth) {
-      return 94-offS;
-    } else if (810 > screenWidth) {
-      return 93-offS;
-    }
-    console.log("calcT")
-    return calcT;
-  }
+  // Use stable camera FOV that freezes on mobile
+  const cameraFOV = getCameraFOV(screenWidth);
 
   return (
     <>
@@ -596,8 +529,8 @@ export default function Experience({
         ref={cameraRef}
         theatreKey="Camera"
         makeDefault
-        // Use your existing baseline only at mount; runtime ignores subsequent fov changes.
-        fov={Math.min(Math.max(GetVal(), 55), 130)}
+        // Use stable FOV that freezes on mobile to prevent flickering
+        fov={cameraFOV}
         // fov={100}
         position={[0, 2, 10]}
         near={0.001}
@@ -611,7 +544,7 @@ export default function Experience({
 
       <mesh position={[0, 0, 70]} onClick={(e) => clickObserver(e)}>
         <planeGeometry args={[3000, 3000, 1, 1]} />
-        <meshBasicMaterial color={"transparent"} side={THREE.DoubleSide} transparent opacity={0} alphaTest={0.001} />
+        <meshBasicMaterial color={"#000000"} side={THREE.DoubleSide} transparent opacity={0} alphaTest={0.001} />
       </mesh>
 
       {/* ribbon */}

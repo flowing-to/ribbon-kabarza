@@ -1,5 +1,5 @@
 import { useTexture } from "@react-three/drei";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Vector3 } from "three";
 import type { IimageShaderMaterial } from "./Experience";
@@ -34,6 +34,183 @@ export const progressLength = 0.916;
 export const MOMENTUM_DECAY = 0.99;
 export const MOMENTUM_BOOST = 0.02;
 export const BASE_SPEED = 0.1;
+
+export const MOBILE_BREAKPOINT = 768;
+
+// Hook to get viewport size with mobile freeze functionality
+export function useStableViewportSize() {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [isMobile, setIsMobile] = useState(false);
+  const fixedSizeRef = useRef<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    const updateSize = () => {
+      const { clientWidth, clientHeight } = document.documentElement;
+      const currentSize = { width: clientWidth, height: clientHeight };
+      const isMobileViewport = clientWidth < MOBILE_BREAKPOINT;
+      
+      setIsMobile(isMobileViewport);
+      
+      // On mobile, freeze dimensions after first measurement
+      if (isMobileViewport) {
+        if (!fixedSizeRef.current) {
+          fixedSizeRef.current = currentSize;
+          setSize(currentSize);
+        }
+        // Don't update size on mobile after initial measurement
+      } else {
+        // On desktop, allow responsive behavior
+        setSize(currentSize);
+        fixedSizeRef.current = null;
+      }
+    };
+
+    updateSize();
+
+    // Prefer visualViewport if available for mobile UI chrome changes
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener("resize", updateSize);
+      vv.addEventListener("scroll", updateSize);
+      window.addEventListener("resize", updateSize);
+      return () => {
+        vv.removeEventListener("resize", updateSize);
+        vv.removeEventListener("scroll", updateSize);
+        window.removeEventListener("resize", updateSize);
+      };
+    } else {
+      window.addEventListener("resize", updateSize);
+      return () => window.removeEventListener("resize", updateSize);
+    }
+  }, []);
+
+  return { ...size, isMobile };
+}
+
+// Hook for stable font size calculation with mobile freeze
+export function useStableFontSize() {
+  const cachedMobileFontSizeRef = useRef<number | null>(null);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
+
+  const getFontSize = useCallback((...text: string[]) => {
+    const textLength = text.join("\n").split("\n").map(e => e.trim()).sort((a,b) => b.length-a.length)[0].length;
+    const currentWidth = window.innerWidth;
+    const isMobile = currentWidth < MOBILE_BREAKPOINT;
+    
+    if (isMobile !== isMobileLayout) {
+      setIsMobileLayout(isMobile);
+    }
+    
+    // On mobile, use cached value if available
+    if (isMobile && cachedMobileFontSizeRef.current !== null) {
+      return cachedMobileFontSizeRef.current;
+    }
+    
+    const screenW = Math.min(currentWidth, 1100);
+    const letterWidth = screenW / textLength;
+    const boost = 1 / 1100 * screenW * 2;
+    const pixelUnitToFont = 5.8;
+    let finalSize = (letterWidth * (3 - boost)) / pixelUnitToFont;
+    const calculatedSize = Math.floor(finalSize);
+    
+    // Cache the font size on mobile
+    if (isMobile && cachedMobileFontSizeRef.current === null) {
+      cachedMobileFontSizeRef.current = calculatedSize;
+    }
+    
+    return calculatedSize;
+  }, [isMobileLayout]);
+
+  return { getFontSize, isMobileLayout };
+}
+
+// Hook for stable camera FOV calculation with mobile freeze
+export function useStableCameraFOV() {
+  const cachedMobileFOVRef = useRef<number | null>(null);
+
+  const getCameraFOV = useCallback((screenWidth: number) => {
+    const isMobile = screenWidth < MOBILE_BREAKPOINT;
+    
+    // On mobile, use cached value if available
+    if (isMobile && cachedMobileFOVRef.current !== null) {
+      return cachedMobileFOVRef.current;
+    }
+
+    const num = 75000;
+
+    function scaleInverted(x = 0, a = 0, b = 1000) {
+      if (a === b) throw new Error("a and b must differ");
+      const t = (b - x) / (b - a);
+      const res = Math.max(0, Math.min(1, t));
+      return res;
+    }
+
+    const calcT = num / screenWidth ** 1.001 - 30 * scaleInverted(screenWidth, 200, 800) - 15 * scaleInverted(screenWidth, 800, 1500);
+
+    const offS = 10;
+    function GetVal() {
+      if (360 > screenWidth) {
+        return calcT;
+      } else if (390 > screenWidth) {
+        return 125 - offS;
+      } else if (410 > screenWidth) {
+        return 123 - offS;
+      } else if (430 > screenWidth) {
+        return 121 - offS;
+      } else if (450 > screenWidth) {
+        return 119 - offS;
+      } else if (470 > screenWidth) {
+        return 117 - offS;
+      } else if (490 > screenWidth) {
+        return 114 - offS;
+      } else if (510 > screenWidth) {
+        return 111 - offS;
+      } else if (530 > screenWidth) {
+        return 109 - offS;
+      } else if (550 > screenWidth) {
+        return 107 - offS;
+      } else if (570 > screenWidth) {
+        return 105 - offS;
+      } else if (590 > screenWidth) {
+        return 103 - offS;
+      } else if (610 > screenWidth) {
+        return 101 - offS;
+      } else if (630 > screenWidth) {
+        return 99 - offS;
+      } else if (650 > screenWidth) {
+        return 98 - offS;
+      } else if (670 > screenWidth) {
+        return 97 - offS;
+      } else if (690 > screenWidth) {
+        return 96 - offS;
+      } else if (710 > screenWidth) {
+        return 94 - offS;
+      } else if (730 > screenWidth) {
+        return 92 - offS;
+      } else if (750 > screenWidth) {
+        return 93 - offS;
+      } else if (770 > screenWidth) {
+        return 95 - offS;
+      } else if (790 > screenWidth) {
+        return 94 - offS;
+      } else if (810 > screenWidth) {
+        return 93 - offS;
+      }
+      return calcT;
+    }
+
+    const calculatedFOV = Math.min(Math.max(GetVal(), 55), 130);
+    
+    // Cache the FOV on mobile
+    if (isMobile && cachedMobileFOVRef.current === null) {
+      cachedMobileFOVRef.current = calculatedFOV;
+    }
+    
+    return calculatedFOV;
+  }, []);
+
+  return { getCameraFOV };
+}
 
 // const carouselAxisAngle = new Vector3(-0.5, -1, 0)
 // const carouselAngle = -0.4

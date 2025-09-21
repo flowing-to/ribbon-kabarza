@@ -15,7 +15,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import Experience from "./Experience";
 import { useIsClient } from "@uidotdev/usehooks";
-import { useCarouselImages } from "./constants";
+import { useCarouselImages, useStableViewportSize, MOBILE_BREAKPOINT } from "./constants";
 import { debug } from "../../config";
 
 const isProd = true;
@@ -26,38 +26,6 @@ export const project = getProject(
 );
 export const ribbonSheet = project.sheet("Ribbon r3f Sheet");
 
-// ---- hook: viewport client size (excludes scrollbar)
-function useViewportClientSize() {
-  const isClient = useIsClient();
-  const [size, setSize] = useState({ width: 0, height: 0 });
-
-  useEffect(() => {
-    if (!isClient) return;
-    const update = () => {
-      const { clientWidth, clientHeight } = document.documentElement;
-      setSize({ width: clientWidth, height: clientHeight });
-    };
-    update();
-
-    // Prefer visualViewport if available for mobile UI chrome changes
-    const vv = window.visualViewport;
-    if (vv) {
-      vv.addEventListener("resize", update);
-      vv.addEventListener("scroll", update);
-      window.addEventListener("resize", update);
-      return () => {
-        vv.removeEventListener("resize", update);
-        vv.removeEventListener("scroll", update);
-        window.removeEventListener("resize", update);
-      };
-    } else {
-      window.addEventListener("resize", update);
-      return () => window.removeEventListener("resize", update);
-    }
-  }, [isClient]);
-
-  return size;
-}
 
 function PreloadAssets() {
   const { imageUrls } = useCarouselImages();
@@ -68,15 +36,46 @@ function PreloadAssets() {
 }
 
 export default function Scene() {
-  const [isMobile, setIsMobile] = useState(true);
   const [animationStart, setAnimationStart] = useState(false);
   const { total, progress } = useProgress();
   const [readyToStart, setReadyToStart] = useState(false);
   const [dpr, setDpr] = useState(2);
   const isClient = useIsClient();
 
-  // viewport width/height excluding scrollbar
-  const { width: viewportWidth } = useViewportClientSize();
+  // stable viewport size with mobile freeze functionality
+  const { width: viewportWidth, isMobile } = useStableViewportSize();
+  
+  // Additional resize handling for mobile stability
+  const [stableCanvasSize, setStableCanvasSize] = useState({ width: viewportWidth, height: window.innerHeight });
+  const frozenCanvasSizeRef = useRef<{ width: number; height: number } | null>(null);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      const currentWidth = viewportWidth || window.innerWidth;
+      const currentHeight = window.innerHeight;
+      const isMobileViewport = currentWidth < MOBILE_BREAKPOINT;
+      
+      if (isMobileViewport) {
+        // On mobile, freeze canvas dimensions after first measurement
+        if (!frozenCanvasSizeRef.current) {
+          frozenCanvasSizeRef.current = { width: currentWidth, height: currentHeight };
+          setStableCanvasSize({ width: currentWidth, height: currentHeight });
+        }
+        // Don't update canvas size on mobile
+      } else {
+        // On desktop, allow responsive behavior
+        setStableCanvasSize({ width: currentWidth, height: currentHeight });
+        frozenCanvasSizeRef.current = null;
+      }
+    };
+    
+    // Initial setup
+    handleResize();
+    
+    // Only listen to resize events that aren't already handled by App.tsx width changes
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [viewportWidth]);
 
   useEffect(() => {
     if (debug) console.log("total", total);
@@ -150,9 +149,9 @@ export default function Scene() {
           position: "fixed",
           top: 0,
           left: 0,
-          // previously: width: "calc(100vw - 14px)"
-          width: viewportWidth || undefined, // number → px, excludes scrollbar
-          height: "100vh",
+          // Use stable canvas size to prevent resize jittering on mobile
+          width: stableCanvasSize.width || undefined,
+          height: isMobile ? stableCanvasSize.height : "100vh", // Use fixed height on mobile
           pointerEvents: "auto",
           touchAction: "pan-y",
           backgroundColor: "transparent",
@@ -168,7 +167,7 @@ export default function Scene() {
                   progressRef={progressRef}
                   timeRef={timeRef}
                   isMobile={isMobile}
-                  screenWidth={viewportWidth || 1000}
+                  screenWidth={stableCanvasSize.width || 1000}
                 />
                 <PerformanceMonitor
                   bounds={(r) => (r > 90 ? [90, 120] : [50, 70])}
