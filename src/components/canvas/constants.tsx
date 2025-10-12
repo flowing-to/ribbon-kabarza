@@ -4,10 +4,8 @@ import * as THREE from "three";
 import { Vector3 } from "three";
 import type { IimageShaderMaterial } from "./Experience";
 import { debug } from "../../config";
+
 let titlesList:{imageNum:number, img:string, title:string, titleM:string}[] = [];
-computeTitlesList()
-function computeTitlesList() {
-  titlesList=[];
 [...document.querySelectorAll("[data-flow-ribbon-nr]")].forEach(el => {
   const imageNum = parseInt(el.getAttribute("data-flow-ribbon-nr")!)
   const title = el.getAttribute("data-flow-ribbon-text")!
@@ -22,10 +20,6 @@ function computeTitlesList() {
   })
 })
 titlesList = titlesList.sort((a,b) => b.imageNum - a.imageNum)
-}
-
-
-
 
 if (debug) console.log(titlesList)
 
@@ -95,7 +89,7 @@ export function useStableFontSize() {
   const cachedMobileFontSizeRef = useRef<number | null>(null);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
 
-
+  
   const getFontSize = useCallback((...text: string[]) => {
     const textLength = text.join("\n").split("\n").map(e => e.trim()).sort((a,b) => b.length-a.length)[0].length;
     const currentWidth = window.innerWidth;
@@ -215,7 +209,6 @@ export function useStableCameraFOV() {
       } else if (810 > screenWidth) {
         return 93 - offS;
       }
-      console.log("fallback")
       return calcT;
     }
 
@@ -316,7 +309,6 @@ return  (el.getAttribute("data-flow-default-text")?? "fallback Text").replaceAll
 
 export function useCarouselImages() {
   const imageUrls = useMemo(() => {
-    computeTitlesList()
     if (titlesList.length > 0) {
       return titlesList.map(e => e.img).slice(0,carouselCount)
     } else {
@@ -344,7 +336,6 @@ export function useCarouselTexts() {
 
   useEffect(() => {
     // Wait for DOM to be fully loaded
-    computeTitlesList()
     if (document.readyState === "complete") {
       setDomReady(true);
     } else {
@@ -357,7 +348,7 @@ export function useCarouselTexts() {
   const imageTexts = useMemo(() => {
     if (debug) console.log("useCarouselTexts - domReady:", domReady);
     if (debug) console.log("webflowTexts:",  titlesList);
-    computeTitlesList()
+
     // If we have DOM texts, use them, otherwise fallback to titlesList
     if (titlesList.length > 1) {
       return titlesList;
