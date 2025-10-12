@@ -5,7 +5,7 @@ import { Vector3 } from "three";
 import type { IimageShaderMaterial } from "./Experience";
 import { debug } from "../../config";
 
-let titlesList:{imageNum:number, img:string, title:string, titleM:string}[] = [];
+let titlesList:{imageNum:number, img:string, title:string, titleM:string,texture:any}[] = [];
 [...document.querySelectorAll("[data-flow-ribbon-nr]")].forEach(el => {
   const imageNum = parseInt(el.getAttribute("data-flow-ribbon-nr")!)
   const title = el.getAttribute("data-flow-ribbon-text")!
@@ -16,11 +16,11 @@ let titlesList:{imageNum:number, img:string, title:string, titleM:string}[] = []
     imageNum,
     title,
     titleM,
-    img
+    img,
+    texture:undefined
   })
 })
-titlesList = titlesList.sort((a,b) => b.imageNum - a.imageNum)
-
+titlesList = titlesList.sort((a,b) => a.imageNum-b.imageNum ).slice(0,12)
 if (debug) console.log(titlesList)
 
 export const carouselRadius = 26;
@@ -310,25 +310,26 @@ return  (el.getAttribute("data-flow-default-text")?? "fallback Text").replaceAll
 export function useCarouselImages() {
   const imageUrls = useMemo(() => {
     if (titlesList.length > 0) {
-      return titlesList.map(e => e.img).slice(0,carouselCount)
+      return titlesList
     } else {
       console.log("FALLBACK IMAGES USED")
       return Array(carouselCount)
         .fill(undefined)
         .map(
           (_, i) =>
-            `https://flowing-canvas.vercel.app/images/img${Math.floor(i % carouselCount) + 1}_.webp`,
+            ({img: `https://flowing-canvas.vercel.app/images/img${Math.floor(i % carouselCount) + 1}_.webp`, imageNum:i, texture:useTexture([`https://flowing-canvas.vercel.app/images/img${Math.floor(i % carouselCount) + 1}_.webp`])}),
         );
     }
   }, []);
 
-  const imageTextures = useTexture(imageUrls);
   const imageShaderRefs = useRef<(IimageShaderMaterial | null)[]>([]);
   useMemo(() => {
     imageShaderRefs.current = Array(carouselCount).fill(null);
   }, []);
 
-  return { imageUrls, imageTextures, imageShaderRefs };
+    const imageUrlsWithTexture = titlesList.map(e => ({...e,texture :useTexture([e.img]) }))
+
+  return { imageUrls,imageUrlsWithTexture,  imageShaderRefs };
 }
 
 export function useCarouselTexts() {

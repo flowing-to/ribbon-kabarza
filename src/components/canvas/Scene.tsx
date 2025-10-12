@@ -29,7 +29,7 @@ export const ribbonSheet = project.sheet("Ribbon r3f Sheet");
 
 function PreloadAssets() {
   const { imageUrls } = useCarouselImages();
-  useTexture([...imageUrls]);
+  useTexture([...imageUrls.map(e => e.img)]);
   useTexture("https://flowing-canvas.vercel.app/linen/Plain_Grey_Texture_col.jpg");
   useTexture("https://flowing-canvas.vercel.app/linen/Plain_Grey_Texture_nrm.jpg");
   return null;

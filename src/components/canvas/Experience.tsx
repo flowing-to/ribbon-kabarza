@@ -252,7 +252,7 @@ export default function Experience({
   const lastClickedImage = useRef(0);
 
   const { col, normal } = useLinenTextures();
-  const { imageTextures, imageShaderRefs } = useCarouselImages();
+  const { imageUrlsWithTexture, imageShaderRefs } = useCarouselImages();
   const { momentum, wasAtCarousel } = useMomentum();
   const { getCameraFOV } = useStableCameraFOV();
 
@@ -578,7 +578,7 @@ export default function Experience({
               carouselCount={carouselCount}
               progressRef={progressRef}
               timeRef={timeRef}
-              imageTexture={imageTextures[i]}
+              imageTexture={imageUrlsWithTexture[i].texture[0]}
               shaderRef={(el) => {
                 imageShaderRefs.current[i] = el;
               }}

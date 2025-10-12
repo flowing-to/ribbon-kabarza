@@ -110,7 +110,7 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
       const mobile = window.innerWidth < MOBILE_BREAKPOINT;
 
       const entry = imageTexts.find(
-        (item) => (item.imageNum - 1) === imageIndex
+        (item) => (item.imageNum ) === imageIndex
       );
 
 
@@ -142,7 +142,7 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
       const mobile = window.innerWidth < MOBILE_BREAKPOINT
 
       const entry = imageTexts.find(
-        (item) => (item.imageNum - 1) === imageIndex
+        (item) => (item.imageNum ) === imageIndex
       )
       const imageText = (mobile ? entry?.titleM ?? "" : entry?.title ?? "").replaceAll("\\n", `
 `)
