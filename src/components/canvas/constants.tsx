@@ -92,6 +92,7 @@ export function useStableFontSize() {
   const cachedMobileFontSizeRef = useRef<number | null>(null);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
 
+  
   const getFontSize = useCallback((...text: string[]) => {
     const textLength = text.join("\n").split("\n").map(e => e.trim()).sort((a,b) => b.length-a.length)[0].length;
     const currentWidth = window.innerWidth;
