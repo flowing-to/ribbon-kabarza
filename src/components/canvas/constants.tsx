@@ -124,6 +124,17 @@ export function useStableFontSize() {
   return { getFontSize, isMobileLayout };
 }
 
+function aspectMultiplier() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  if (!w || !h) return 0;
+
+  const aspect = Math.min(w, h) / Math.max(w, h); // 1 at square, →0 as it gets wider/taller
+  const scale = 1.344; // chosen so 1920×1000 → 0.7 and 1920×500 → 0.35
+  return Math.min(1, scale * aspect);
+}
+
+
 // Hook for stable camera FOV calculation with mobile freeze
 export function useStableCameraFOV() {
   const cachedMobileFOVRef = useRef<number | null>(null);
@@ -145,7 +156,11 @@ export function useStableCameraFOV() {
       return res;
     }
 
-    const calcT = num / screenWidth ** 1.001 - 30 * scaleInverted(screenWidth, 200, 800) - 15 * scaleInverted(screenWidth, 800, 1500);
+    let screenWCalc = screenWidth * aspectMultiplier() 
+
+
+    const calcT = num / screenWCalc ** 1.001 - 30 * scaleInverted(screenWCalc, 200, 800) - 15 * scaleInverted(screenWCalc, 800, 1500)
+    
 
     const offS = 10;
     function GetVal() {
@@ -196,6 +211,7 @@ export function useStableCameraFOV() {
       } else if (810 > screenWidth) {
         return 93 - offS;
       }
+      console.log("fallback")
       return calcT;
     }
 

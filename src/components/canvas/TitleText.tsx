@@ -108,7 +108,6 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
       }
 
       const mobile = window.innerWidth < MOBILE_BREAKPOINT;
-      console.log({mobile});
 
       const entry = imageTexts.find(
         (item) => item.imageNum === imageIndex
@@ -139,9 +138,7 @@ export default function TitleText({ currentImage, isMobile, text = "Fallback Tex
   }, [imageTexts, imageIndex, getFontSize, text]);
 
   useEffect(() => {
-
       const mobile = window.innerWidth < MOBILE_BREAKPOINT
-      console.log({mobile})
 
       const entry = imageTexts.find(
         (item) => item.imageNum === imageIndex
