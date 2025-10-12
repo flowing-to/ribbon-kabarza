@@ -295,50 +295,11 @@ return  (el.getAttribute("data-flow-default-text")?? "fallback Text").replaceAll
 }
 
 export function useCarouselImages() {
-  // const [domReady, setDomReady] = useState(false)
-
-  // useEffect(() => {
-  // 	// Wait for DOM to be fully loaded
-  // 	if (document.readyState === 'complete') {
-  // 		setDomReady(true)
-  // 	} else {
-  // 		const handleLoad = () => setDomReady(true)
-  // 		window.addEventListener('load', handleLoad)
-  // 		return () => window.removeEventListener('load', handleLoad)
-  // 	}
-  // }, [])
-
   const imageUrls = useMemo(() => {
-    // console.log(domReady)
-    //   if (!domReady) {
-    // 	  // Return placeholder URLs while waiting for DOM
-    // 	  return Array(carouselCount)
-    // 		  .fill(undefined)
-    // 		  .map((_, i) => `https://flowing-canvas.vercel.app/images/img${Math.floor(i % carouselCount) + 1}_.webp`)
-    //   }
-
-    const webflowImages: string[] = [];
-
-    for (let i = 1; i <= carouselCount; i++) {
-      const element = document.querySelector(`[data-flow-ribbon-img="${i}"]`);
-      if (element) {
-        let imageUrl = "";
-        const imgElement = element as HTMLImageElement;
-        imageUrl = imgElement.dataset.src || imgElement.src;
-
-        if (
-          imageUrl &&
-          !imageUrl.includes("placeholder") &&
-          !imageUrl.endsWith(".avif") &&
-          imageUrl.startsWith("http")
-        ) {
-          webflowImages.push(imageUrl);
-        }
-      }
-    }
-    if (webflowImages.length > 0) {
-      return webflowImages;
+    if (titlesList.length > 0) {
+      return titlesList.map(e => e.img).slice(0,carouselCount)
     } else {
+      console.log("FALLBACK IMAGES USED")
       return Array(carouselCount)
         .fill(undefined)
         .map(
@@ -373,33 +334,11 @@ export function useCarouselTexts() {
 
   const imageTexts = useMemo(() => {
     if (debug) console.log("useCarouselTexts - domReady:", domReady);
-
-    const webflowTexts: { imageNum: number; title: string, titleM:string }[] = [
-      { imageNum: 0, title: "FLOWING", titleM:"FLOWING" },
-    ];
-
-    // Try to get text from DOM elements
-    for (let i = 1; i <= carouselCount; i++) {
-      const element = document.querySelector(
-        `[data-flow-ribbon-text-nr="${i}"]`,
-      );
-      if (debug) console.log(`Element ${i}:`, element);
-      if (element) {
-        const textContent = element.textContent
-          ? element.textContent.trim()
-          : element.textContent;
-        if (debug) console.log(`Text ${i}:`, textContent);
-        if (textContent) {
-          webflowTexts.push({ imageNum: i, title: textContent, titleM: textContent });
-        }
-      }
-    }
-
-    if (debug) console.log("webflowTexts:", webflowTexts);
+    if (debug) console.log("webflowTexts:",  titlesList);
 
     // If we have DOM texts, use them, otherwise fallback to titlesList
-    if (webflowTexts.length > 1) {
-      return webflowTexts;
+    if (titlesList.length > 1) {
+      return titlesList;
     } else {
       if (debug) console.log("Using fallback titlesList");
       return titlesList;
