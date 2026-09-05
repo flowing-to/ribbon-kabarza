@@ -14,7 +14,16 @@ const vertexShader = `uniform float uPixelsPerUnit; uniform vec2 uOrigin; unifor
   .replace('gl_Position = projectionMatrix * viewMatrix * modelPosition;',
     'vec2 titlePosition = (modelPosition.xy - vec2(0.0, 47.12)) * uPixelsPerUnit;\nfloat c = cos(uRotation), s = sin(uRotation);\nmodelPosition.xy = mat2(c, s, -s, c) * titlePosition + uOrigin;\ngl_Position = projectionMatrix * viewMatrix * modelPosition;');
 const fragmentShader = `uniform sampler2D uMask;\n${sourceFragment}`
-  .replace('gl_FragColor = layer2;', 'gl_FragColor = vec4(layer2.rgb, layer2.a * texture2D(uMask, vUv).a);');
+  .replace('void main() {', `void main() {
+    float maskAlpha = texture2D(uMask, vUv).a;
+    if (maskAlpha == 0.0) discard;
+    // At full progress the original three layers resolve to opaque black.
+    // Keep the same mask, but skip reveal noise while the carousel spins.
+    if (uProgress1 == 1.0 && uProgress2 == 1.0 && uProgress3 == 1.0) {
+      gl_FragColor = vec4(0.0, 0.0, 0.0, maskAlpha);
+      return;
+    }`)
+  .replace('gl_FragColor = layer2;', 'gl_FragColor = vec4(layer2.rgb, layer2.a * maskAlpha);');
 
 /** Rasterize only when text/size changes; animate its alpha mask with the original GLSL. */
 export function createTitle(text: string, intro: boolean) {

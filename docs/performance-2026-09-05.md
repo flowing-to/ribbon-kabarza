@@ -1,5 +1,7 @@
 # Standalone carousel performance — 2026-09-05
 
+This is the historical baseline at `1ff6dd8`. The [optimization follow-up](./performance-optimization-2026-09-05.md) covers the smaller direct-browser artifact and current fixture.
+
 The standalone component reaches first contentful paint at a median **288 ms** with **45 ms simulated network latency**. The recognizable ribbon first enters the viewport at approximately **474 ms** in a separate visual recording. Its downloadable JavaScript is **187 kB gzip**, about **57% smaller** than the original bundle.
 
 ## What was measured

@@ -26,9 +26,13 @@ A custom-element wrapper, production fallbacks and final mobile art direction re
 
 `playground-controls.ts` is dynamically imported only by `review.ts`, after mounting the carousel. Tweakpane and its type package are development dependencies. The library entry remains `carousel.ts`; its build fails if a Tweakpane/playground module enters the output. Plain numeric options are usable without the panel. Tweakpane setup follows its [official installation documentation](https://tweakpane.github.io/docs/getting-started/).
 
-For a static shareable playground, run `bunx vite build --config prototype/share.vite.config.ts`. This writes the review page, controls and public assets to `dist/share`; serve that directory and open `/prototype/`. Rebuild after changes to update the shared copy. On this machine, Tailscale Funnel serves it at `https://codingvm.tail48c94d.ts.net:8443/prototype/`; disable that endpoint with `tailscale funnel --https=8443 off`.
+Run **`bun run build`** from the repository root to type-check and build the standalone component with `prototype/vite.config.ts`. The direct browser artifact is `dist/prototype/ribbon-carousel.min.js`, with no Tweakpane. The original application can still be built with `bun run build:reference`.
 
-For standalone production timing without Tweakpane, use `standalone.html` and `measure-performance.mjs` with the built library. See the [45 ms latency measurements and bundle comparison](../docs/performance-2026-09-05.md) for results and reproduction commands.
+For a static shareable playground, run `bun run build:playground`. This writes the review page, controls and public assets to `dist/share`; serve that directory and open `/prototype/`. Rebuild after changes to update the shared copy. On this machine, Tailscale Funnel serves it at `https://codingvm.tail48c94d.ts.net:8443/prototype/`; disable that endpoint with `tailscale funnel --https=8443 off`.
+
+The library build produces two equivalent ESM files: `ribbon-carousel.min.js` for direct browser imports, and `ribbon-carousel.js` with pure annotations retained for downstream bundlers. Load only one. Both contain Three.js and the component, without Tweakpane; the finished browser file is fully minified and retains license comments.
+
+For standalone production timing without Tweakpane, use `standalone.html` and `measure-performance.mjs` with the built library. The fixture loads the `.min.js` artifact. See the [initial 45 ms latency measurements](../docs/performance-2026-09-05.md) and [optimization follow-up](../docs/performance-optimization-2026-09-05.md). `RIBBON_PERF_OUTPUT` selects a separate results directory for comparisons.
 
 ```ts
 import { mountRibbonCarousel } from './carousel';
@@ -60,9 +64,8 @@ Idle and hovered carousels stop rendering after motion settles. Reduced motion s
 ## Checks
 
 ```sh
-./node_modules/.bin/tsc -p prototype/tsconfig.json
 bun test prototype/layout.test.ts prototype/motion.test.ts prototype/title-motion.test.ts prototype/spatial.test.ts
-./node_modules/.bin/vite build --config prototype/vite.config.ts
+bun run build
 
 # With the dev server and agent-browser running:
 agent-browser --session ribbon-audit open http://127.0.0.1:5174/prototype/
@@ -73,8 +76,8 @@ agent-browser --session ribbon-audit eval --stdin < prototype/browser-checks.js
 agent-browser --session ribbon-audit set media light
 ```
 
-The build includes Three.js and maath, excluding image files and Tweakpane. The reviewed build is **865.18 kB / 187.96 kB gzip**. Twelve cards render **32,256 triangles**, compared with 480,000 card triangles in the original. The ribbon adds 7,216 triangles only while visible; the shader title adds 2,560 triangles and one draw call. These are bundle/geometry measurements, not real-phone performance results.
+The direct browser bundle includes Three.js and maath, excluding image files and Tweakpane, and is **529.24 kB / 137.13 kB gzip** (level 9). Twelve cards render **32,256 triangles**, compared with 480,000 card triangles in the original. The ribbon adds 7,216 triangles only while visible; the shader title adds 2,560 triangles and one draw call. Fully revealed titles skip the reveal-noise calculations, and transparent mask pixels skip fragment work. These are bundle/geometry measurements, not real-phone performance results.
 
-Browser checks cover count changes, container resizing, desktop/mobile intro and selected pose, and a complete intro/carousel reveal with all card-image requests blocked. The repeatable browser script checks idle rendering, hover pause/resume, immediate reduced-motion selection, resizing an open card, selection callbacks, replay reset, context release and destruction with image loads pending. Layout/motion tests cover all supported counts, invalid counts, camera fit, rotation wrapping, exported curve values, pulse cadence across refresh rates and interrupted pulse recovery. Real-phone performance and production cold-load timing remain to be assessed.
+Browser checks cover count changes, container resizing, desktop/mobile intro and selected pose, and a complete intro/carousel reveal with all card-image requests blocked. The repeatable browser script checks idle rendering, hover pause/resume, immediate reduced-motion selection, resizing an open card, selection callbacks, replay reset, context release and destruction with image loads pending. Layout/motion tests cover all supported counts, invalid counts, camera fit, rotation wrapping, exported curve values, pulse cadence across refresh rates and interrupted pulse recovery. Production cold-load timing is documented above; real-phone performance remains to be assessed.
 
 Previews were generated ahead of time from the repository's existing local WebP sample images at 240px width using ffmpeg. No image resizing occurs at runtime.

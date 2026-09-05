@@ -1,0 +1,127 @@
+{
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/149.0.7827.155",
+    "revision": "@07b52360cc15066f987c910ab34dfbcd4a8778d2",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36",
+    "jsVersion": "14.9.207.29"
+  },
+  "latencyMs": 45,
+  "bandwidth": "unlimited",
+  "cpuSlowdown": 1,
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "deviceScaleFactor": 1,
+    "mobile": false
+  },
+  "cache": "disabled; fresh browser context per navigation",
+  "gzip": true,
+  "bundle": "dist/prototype/ribbon-carousel.min.js",
+  "beforeCommit": "1ff6dd8",
+  "bundleSizes": {
+    "before": {
+      "rawBytes": 865203,
+      "gzipBytes": 187041
+    },
+    "browser": {
+      "rawBytes": 529237,
+      "gzipBytes": 137127
+    },
+    "bundler": {
+      "rawBytes": 865631,
+      "gzipBytes": 187197
+    }
+  },
+  "gzipLevel": 9,
+  "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "samples": [
+    {
+      "run": 1,
+      "timingsMs": {
+        "first-paint": 88,
+        "first-contentful-paint": 292,
+        "carousel-module-ready": 116.2,
+        "carousel-mounted": 152.9,
+        "carousel-first-render-submitted": 185.4,
+        "carousel-intro-complete": 4523.9
+      },
+      "bundleTransferBytes": 137127,
+      "runtimeErrors": []
+    },
+    {
+      "run": 2,
+      "timingsMs": {
+        "first-paint": 72,
+        "first-contentful-paint": 296,
+        "carousel-module-ready": 113.5,
+        "carousel-mounted": 152.1,
+        "carousel-first-render-submitted": 184.5,
+        "carousel-intro-complete": 4532.8
+      },
+      "bundleTransferBytes": 137127,
+      "runtimeErrors": []
+    },
+    {
+      "run": 3,
+      "timingsMs": {
+        "first-paint": 72,
+        "first-contentful-paint": 308,
+        "carousel-module-ready": 117.4,
+        "carousel-mounted": 156,
+        "carousel-first-render-submitted": 189.5,
+        "carousel-intro-complete": 4536.9
+      },
+      "bundleTransferBytes": 137127,
+      "runtimeErrors": []
+    },
+    {
+      "run": 4,
+      "timingsMs": {
+        "first-paint": 76,
+        "first-contentful-paint": 296,
+        "carousel-module-ready": 116.2,
+        "carousel-mounted": 156.8,
+        "carousel-first-render-submitted": 190.3,
+        "carousel-intro-complete": 4529.2
+      },
+      "bundleTransferBytes": 137127,
+      "runtimeErrors": []
+    },
+    {
+      "run": 5,
+      "timingsMs": {
+        "first-paint": 84,
+        "first-contentful-paint": 296,
+        "carousel-module-ready": 117.1,
+        "carousel-mounted": 157,
+        "carousel-first-render-submitted": 189.8,
+        "carousel-intro-complete": 4508.2
+      },
+      "bundleTransferBytes": 137127,
+      "runtimeErrors": []
+    }
+  ],
+  "filmstrip": {
+    "lastBlankMs": 449.015,
+    "firstRibbonMs": 468.973,
+    "darkInitialFrame": false
+  },
+  "pixelComparison": {
+    "baseline": "title.ts at 1ff6dd8",
+    "size": [
+      640,
+      400
+    ],
+    "cases": [
+      "hidden intro",
+      "intro reveal",
+      "settled",
+      "rotated settled",
+      "exit",
+      "enter"
+    ],
+    "changedChannels": 0,
+    "maximumDifference": 0
+  }
+}

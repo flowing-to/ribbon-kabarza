@@ -7,7 +7,7 @@ import { gzipSync } from 'node:zlib';
 const endpoint = process.argv[2];
 if (!endpoint?.startsWith('ws://127.0.0.1:')) throw new Error('Pass the local agent-browser CDP WebSocket URL.');
 const root = resolve('dist/prototype');
-const output = resolve('dist/performance');
+const output = resolve(process.env.RIBBON_PERF_OUTPUT ?? 'dist/performance');
 await mkdir(output, { recursive: true });
 const html = await readFile('prototype/standalone.html');
 const cache = new Map();
@@ -56,7 +56,7 @@ function on(method, listener) {
 const metadata = { browser: await send('Browser.getVersion'), latencyMs: 45, bandwidth: 'unlimited', cpuSlowdown: 1,
   viewport: { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false },
   cache: 'disabled; fresh browser context per navigation', gzip: true,
-  bundle: 'dist/prototype/ribbon-carousel.js', runs: [] };
+  bundle: 'dist/prototype/ribbon-carousel.min.js', runs: [] };
 
 async function run(index, trace = false) {
   const { browserContextId } = await send('Target.createBrowserContext');
@@ -110,7 +110,7 @@ async function run(index, trace = false) {
     });
     if (exceptionDetails) throw new Error(JSON.stringify(exceptionDetails));
     const data = { run: index, ...result.value, errors };
-    const script = data.resources.find(resource => resource.url.endsWith('/ribbon-carousel.js'));
+    const script = data.resources.find(resource => resource.url.endsWith('/ribbon-carousel.min.js'));
     // Chromium's timing fields can retain the upstream localhost TTFB while
     // emulation delays delivery. Check completed request duration instead.
     if (data.navigation.responseEnd - data.navigation.requestStart < 40 || !script || script.endMs - script.startMs < 40) {
@@ -144,6 +144,10 @@ async function run(index, trace = false) {
 }
 
 try {
+  const { targetInfos } = await send('Target.getTargets');
+  if (targetInfos.some(target => target.type === 'page' && target.url && target.url !== 'about:blank')) {
+    throw new Error('Use a dedicated agent-browser session opened to about:blank; other pages can compete for GPU time.');
+  }
   if (!process.argv.includes('--visual-only')) {
     for (let index = 1; index <= 5; index++) await run(index);
     await writeFile(resolve(output, 'results.json'), JSON.stringify(metadata, null, 2));

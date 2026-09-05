@@ -123,6 +123,9 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     throw error;
   }
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  // We clear before render(); initialize GL's alpha explicitly so the very
+  // first frame is transparent instead of flashing an opaque black canvas.
+  renderer.setClearColor(0x000000, 0);
   renderer.autoClear = false;
   renderer.info.autoReset = false;
   const titleEffect = createTitle(title.textContent!, initial.intro !== false && !reducedMotion.matches);
