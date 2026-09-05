@@ -14,7 +14,8 @@ const defaults = {
   fov: 50, cameraDistance: 1,
   selectionAngle: 5, selectedScale: 1.2,
   selectedX: DEFAULT_SELECTION_OFFSET.x, selectedY: DEFAULT_SELECTION_OFFSET.y, selectedZ: DEFAULT_SELECTION_OFFSET.z,
-  textX: DEFAULT_TITLE.x * 100, textY: DEFAULT_TITLE.y * 100, textScale: 1, textRotation: 0, textWave: 1, textSpeed: 1,
+  textAnchor: DEFAULT_TITLE.anchor, textOverlap: DEFAULT_TITLE.overlapPx,
+  textX: DEFAULT_TITLE.x * 100, textY: DEFAULT_TITLE.y * 100, textScale: DEFAULT_TITLE.scale, textRotation: 0, textWave: 1, textSpeed: 1,
 };
 
 export function mountPlaygroundControls(container: HTMLElement, carousel: ReturnType<typeof mountRibbonCarousel>, createItems: (count: number) => CarouselItem[], onChange: (state: typeof defaults) => void) {
@@ -35,7 +36,7 @@ export function mountPlaygroundControls(container: HTMLElement, carousel: Return
   function orientation() { return { x: radians(params.tiltX), y: radians(params.tiltY), z: radians(params.tiltZ) }; }
   function axis() { return { x: params.axisX, y: params.axisY, z: params.axisZ }; }
   function selectedOffset() { return { x: params.selectedX, y: params.selectedY, z: params.selectedZ }; }
-  function textOptions() { return { x: params.textX / 100, y: params.textY / 100, scale: params.textScale, rotation: radians(params.textRotation), waveStrength: params.textWave, transitionSpeed: params.textSpeed }; }
+  function textOptions() { return { anchor: params.textAnchor, overlapPx: params.textOverlap, x: params.textX / 100, y: params.textY / 100, scale: params.textScale, rotation: radians(params.textRotation), waveStrength: params.textWave, transitionSpeed: params.textSpeed }; }
   function options(): Partial<CarouselOptions> {
     return { gapDegrees: params.gap, cardWidth: params.cardWidth, cardHeight: params.cardHeight,
       orientation: orientation(), rotationAxis: axis(), rotation: radians(params.spin),
@@ -96,7 +97,7 @@ export function mountPlaygroundControls(container: HTMLElement, carousel: Return
     params.autoRotate = false;
     apply({ rotation: radians(params.spin), autoRotate: false });
   });
-  const spinAxis = pane.addFolder({ title: 'Spin axis', expanded: false });
+  const spinAxis = pane.addFolder({ title: 'Ring axis', expanded: false });
   for (const key of ['axisX', 'axisY', 'axisZ'] as const) {
     spinAxis.addBinding(params, key, { label: `Axis ${key.at(-1)}`, min: -1, max: 1, step: 0.01 }).on('change', () => apply({ rotationAxis: axis() }));
   }
@@ -114,8 +115,14 @@ export function mountPlaygroundControls(container: HTMLElement, carousel: Return
   }
 
   const text = pane.addFolder({ title: 'Text placement and effect', expanded: true });
+  text.addBinding(params, 'textAnchor', { label: 'Anchor', options: { 'Foreground rim': 'ring', 'Container top': 'container' } }).on('change', () => {
+    manualTop.disabled = params.textAnchor === 'ring'; overlap.disabled = params.textAnchor === 'container';
+    apply({ text: textOptions() });
+  });
+  const overlap = text.addBinding(params, 'textOverlap', { label: 'Overlap px', min: -30, max: 60, step: 1 }).on('change', () => apply({ text: textOptions() }));
+  const manualTop = text.addBinding(params, 'textY', { label: 'Top % (manual)', min: -10, max: 60, step: 0.5, disabled: params.textAnchor === 'ring' }).on('change', () => apply({ text: textOptions() }));
   for (const [key, label, min, max, step] of [
-    ['textX', 'Horizontal %', 10, 90, 0.5], ['textY', 'Top %', -10, 60, 0.5], ['textScale', 'Size', 0.4, 2, 0.01],
+    ['textX', 'Horizontal %', 10, 90, 0.5], ['textScale', 'Size', 0.4, 2, 0.01],
     ['textRotation', 'Rotation °', -45, 45, 0.1], ['textWave', 'Wave strength', 0, 2, 0.05], ['textSpeed', 'Transition speed', 0.25, 3, 0.05],
   ] as const) text.addBinding(params, key, { label, min, max, step }).on('change', () => apply({ text: textOptions() }));
   const camera = pane.addFolder({ title: 'Camera', expanded: false });
@@ -124,7 +131,7 @@ export function mountPlaygroundControls(container: HTMLElement, carousel: Return
 
   function exportSettings() {
     const stats = carousel.getStats();
-    return { version: 1, count: stats.count, options: { ...appliedOptions, rotation: stats.rotation }, selected: stats.selected,
+    return { version: 2, count: stats.count, options: { ...appliedOptions, rotation: stats.rotation }, selected: stats.selected,
       derived: { radius: stats.radius, cardDegrees: stats.cardDegrees }, viewport: { width: stats.width, height: stats.height } };
   }
   pane.addButton({ title: 'Replay intro' }).on('click', () => carousel.replayIntro());

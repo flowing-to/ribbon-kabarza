@@ -7,6 +7,7 @@ import { INTRO_DURATION, sampleIntro } from './timeline';
 import { RELEASE_SMOOTH_TIME, startPulse, stepPulse, type Pulse } from './motion';
 import { createTitle } from './title';
 import { DEFAULT_AXIS, DEFAULT_SELECTION_OFFSET, type TitleOptions, type Vector3Value } from './config';
+import { createForegroundProjection, RING_CENTER, ringPoseQuaternion } from './spatial';
 
 export interface CarouselItem {
   id: string;
@@ -21,6 +22,7 @@ export interface CarouselOptions {
   tilt?: number;
   /** XYZ Euler angles in radians. Supersedes the legacy Z-only tilt option. */
   orientation?: Vector3Value;
+  /** Ring axis before the outer orientation; spinning always follows the ring's local normal. */
   rotationAxis?: Vector3Value;
   /** Initial spin in radians; updating this sets the current spin immediately. */
   rotation?: number;
@@ -134,13 +136,13 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(options.cameraFov ?? 50, 1, 0.1, 1200);
   const ring = new THREE.Group();
+  const ringPose = new THREE.Group();
+  ringPose.position.copy(RING_CENTER);
   function orientation() { return options.orientation ?? { x: 0, y: 0, z: options.tilt ?? -0.1 }; }
-  const initialOrientation = orientation();
-  const ringBase = new THREE.Quaternion().setFromEuler(new THREE.Euler(initialOrientation.x, initialOrientation.y, initialOrientation.z));
-  ring.quaternion.copy(ringBase);
-  scene.add(ring);
+  ringPose.quaternion.copy(ringPoseQuaternion(orientation(), options.rotationAxis ?? DEFAULT_AXIS));
+  ringPose.add(ring); scene.add(ringPose);
   let geometry = cardGeometry();
-  let ribbon = createRibbon(options.items.length, layout.radius, orientation());
+  let ribbon = createRibbon(options.items.length, layout.radius, orientation(), options.rotationAxis, layout.height);
   scene.add(ribbon.mesh);
   ribbon.enhance(options.fabric);
   const dummy = new THREE.DataTexture(new Uint8Array([220, 220, 215, 255]), 1, 1);
@@ -156,7 +158,8 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
   const restCamera = new THREE.Vector3();
   const cameraTarget = new THREE.Vector3();
   const inverseRing = new THREE.Quaternion();
-  const rotationAxis = new THREE.Vector3().copy(options.rotationAxis ?? DEFAULT_AXIS).normalize();
+  const projectForeground = createForegroundProjection();
+  let foregroundTop: { x: number; y: number } | null = null;
   const worldPosition = new THREE.Vector3();
   const referenceView = new THREE.Vector3(introEnd.cameraX - introEnd.lookX, introEnd.cameraY - introEnd.lookY, introEnd.cameraZ);
 
@@ -241,7 +244,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
 
   function positionCard(mesh: Card['mesh'], index: number) {
     const angle = (options.items.length - 1 - index) * layout.step;
-    mesh.position.set(Math.sin(angle) * layout.radius, 10, Math.cos(angle) * layout.radius);
+    mesh.position.set(Math.sin(angle) * layout.radius, 0, Math.cos(angle) * layout.radius);
     mesh.rotation.y = angle;
     mesh.material.uniforms.uRadius.value = layout.radius;
     mesh.material.uniforms.uCardAspect.value = layout.width / layout.height;
@@ -278,7 +281,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     selected = index;
     velocity = 0; inertia = { value: 0 };
     if (index >= 0) {
-      const target = (cards.length - 1 - index) * layout.step - Math.PI + (options.selectionAngle ?? Math.PI / 36);
+      const target = selectionRotation(index);
       rotationTarget = shortestAngle(rotation.value, target);
       cards[index].openingStarted = false;
     }
@@ -289,6 +292,13 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     if (index >= 0) upgrade(index);
     options.onSelect?.(index < 0 ? null : options.items[index].id);
     invalidate();
+  }
+
+  function selectionRotation(index: number) {
+    ringPose.updateMatrixWorld(true);
+    const localCamera = ringPose.worldToLocal(restCamera.clone());
+    const frontAngle = Math.atan2(localCamera.x, localCamera.z);
+    return (cards.length - 1 - index) * layout.step - frontAngle + (options.selectionAngle ?? Math.PI / 36);
   }
 
   function render(now: number) {
@@ -326,9 +336,12 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       if (!gesture) rotationTarget += currentSpeed * dt;
     } else currentSpeed = 0;
     damp(rotation, 'value', rotationTarget, selected >= 0 ? 0.25 : 0.1, dt * 0.6);
-    ring.quaternion.setFromAxisAngle(rotationAxis, rotation.value).multiply(ringBase);
+    // Spin around the circle's own normal; pose and center stay fixed outside it.
+    ring.rotation.set(0, -rotation.value, 0);
+    ringPose.updateMatrixWorld(true);
+    camera.updateMatrixWorld();
     damp(wind, 'value', selected < 0 ? Math.max(0, Math.abs(currentSpeed) - 0.1) * 0.28 : 0, selected < 0 ? 0.6 : 0.1, dt * 0.6);
-    inverseRing.copy(ring.quaternion).invert();
+    ring.getWorldQuaternion(inverseRing).invert();
     const focal = 2 * Math.tan(camera.fov * Math.PI / 360);
     const selectedScale = options.selectedScale ?? 1.2;
     const offset = options.selectionOffset ?? DEFAULT_SELECTION_OFFSET;
@@ -362,12 +375,15 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     });
     controls.style.opacity = introFinished ? '1' : '0';
     controls.inert = !introFinished;
+    foregroundTop = projectForeground(layout.radius, layout.height, ringPose.matrixWorld, camera, width, height);
+    titleEffect.setRingTop(foregroundTop?.y ?? null);
     // Always advance the text controller, including when a card is still moving.
     const titleMoving = titleEffect.update(dt, reducedMotion.matches);
     moving ||= titleMoving;
     renderer.info.reset(); renderer.clear();
-    renderer.render(scene, camera);
+    // The front cards occlude the small part of the title tucked into the rim.
     titleEffect.render(renderer);
+    renderer.clearDepth(); renderer.render(scene, camera);
     renderedFrames++;
     // Upgrade front-facing previews after they are visible; no global readiness gate.
     if (introFinished && elapsed - lastUpgrade > 0.25) {
@@ -473,11 +489,10 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       const nextLayout = layoutForCount(nextOptions.items.length, nextOptions.gapDegrees, nextOptions.cardWidth, nextOptions.cardHeight);
       const wasSelected = selected >= 0;
       const rebuildLayout = !!next.items || nextLayout.gapDegrees !== layout.gapDegrees || nextLayout.width !== layout.width || nextLayout.height !== layout.height;
-      const rebuildRibbon = rebuildLayout || nextOptions.tilt !== options.tilt || JSON.stringify(nextOptions.orientation) !== JSON.stringify(options.orientation);
+      const poseChanged = nextOptions.tilt !== options.tilt || JSON.stringify(nextOptions.orientation) !== JSON.stringify(options.orientation) || JSON.stringify(nextOptions.rotationAxis) !== JSON.stringify(options.rotationAxis);
+      const rebuildRibbon = rebuildLayout || poseChanged;
       options = nextOptions;
-      const angles = orientation();
-      ringBase.setFromEuler(new THREE.Euler(angles.x, angles.y, angles.z));
-      rotationAxis.copy(options.rotationAxis ?? DEFAULT_AXIS).normalize();
+      ringPose.quaternion.copy(ringPoseQuaternion(orientation(), options.rotationAxis ?? DEFAULT_AXIS));
       if (rebuildLayout) {
         layout = nextLayout;
         const previous = geometry;
@@ -496,20 +511,21 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       }
       if (rebuildRibbon) {
         scene.remove(ribbon.mesh); ribbon.dispose();
-        ribbon = createRibbon(options.items.length, layout.radius, orientation());
+        ribbon = createRibbon(options.items.length, layout.radius, orientation(), options.rotationAxis, layout.height);
         scene.add(ribbon.mesh); ribbon.enhance(options.fabric);
       } else if (next.fabric) ribbon.enhance(next.fabric);
       if (next.rotation !== undefined) {
         cancel(); rotationTarget = next.rotation; rotation = { value: rotationTarget };
         inertia = { value: 0 }; velocity = 0;
-      } else if (next.selectionAngle !== undefined && selected >= 0) {
-        rotationTarget = shortestAngle(rotation.value, (cards.length - 1 - selected) * layout.step - Math.PI + next.selectionAngle);
       }
       if (next.intro === false) introFinished = true;
       if (selected < 0) { title.textContent = options.title ?? 'Beautiful Designs\nAdvanced Interactions'; close.hidden = true; status.textContent = 'Drag to explore'; }
       titleEffect.setText(title.textContent!);
       if (next.intro === false) titleEffect.reset(title.textContent!, false);
       resize();
+      if (selected >= 0 && next.rotation === undefined && (poseChanged || next.selectionAngle !== undefined || next.cameraDistanceScale !== undefined || next.cameraFov !== undefined)) {
+        rotationTarget = shortestAngle(rotation.value, selectionRotation(selected));
+      }
       if (next.items && wasSelected) options.onSelect?.(null);
     },
     destroy() {
@@ -527,7 +543,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       renderer.forceContextLoss();
       root.remove();
     },
-    getStats() { return { introFinished, introElapsed, rotation: rotation.value, speed: currentSpeed, wind: wind.value, title: titleEffect.getState(), count: cards.length, radius: layout.radius, gapDegrees: layout.gapDegrees, cardDegrees: layout.cardAngle * 180 / Math.PI, width, height, triangles: renderer.info.render.triangles, textures: renderer.info.memory.textures, renderedFrames, pendingImages: activeLoads + queue.length, isAnimating: !!frameId, selected: selected < 0 ? null : options.items[selected].id }; },
+    getStats() { return { introFinished, introElapsed, rotation: rotation.value, speed: currentSpeed, wind: wind.value, foregroundTop, title: titleEffect.getState(), count: cards.length, radius: layout.radius, gapDegrees: layout.gapDegrees, cardDegrees: layout.cardAngle * 180 / Math.PI, width, height, triangles: renderer.info.render.triangles, textures: renderer.info.memory.textures, renderedFrames, pendingImages: activeLoads + queue.length, isAnimating: !!frameId, selected: selected < 0 ? null : options.items[selected].id }; },
   };
 }
 
@@ -544,6 +560,10 @@ function validateTuning(options: CarouselOptions) {
   }
   if (options.rotationAxis && Math.hypot(options.rotationAxis.x, options.rotationAxis.y, options.rotationAxis.z) === 0) throw new RangeError('Rotation axis cannot be zero.');
   for (const [key, value] of Object.entries(options.text ?? {})) {
+    if (key === 'anchor') {
+      if (value !== 'ring' && value !== 'container') throw new RangeError('Invalid title anchor.');
+      continue;
+    }
     if (!Number.isFinite(value) || (['scale', 'transitionSpeed'].includes(key) && value <= 0) || (key === 'waveStrength' && value < 0)) throw new RangeError(`Invalid text ${key}.`);
   }
 }

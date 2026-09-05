@@ -4,7 +4,8 @@ import sourceFragment from '../src/glsl/ribbon/ribbonFragment.glsl?raw';
 import ambient from '../src/glsl/includes/ambientLight.glsl?raw';
 import directional from '../src/glsl/includes/directionalLight.glsl?raw';
 import point from '../src/glsl/includes/pointLight.glsl?raw';
-import type { Vector3Value } from './config';
+import { DEFAULT_AXIS, type Vector3Value } from './config';
+import { RING_CENTER, ringPoseQuaternion } from './spatial';
 
 const vertexShader = sourceVertex.replace(
   'smoothstep(fadeEndT, fadeStartT, abs(t - 0.5))',
@@ -15,11 +16,12 @@ const fragmentShader = sourceFragment
   .replace('#include "../includes/directionalLight.glsl";', directional)
   .replace('#include "../includes/pointLight.glsl";', point);
 
-export function createRibbon(count: number, radius: number, orientation: Vector3Value = { x: 0, y: 0, z: -0.1 }) {
+export function createRibbon(count: number, radius: number, orientation: Vector3Value = { x: 0, y: 0, z: -0.1 }, axis = DEFAULT_AXIS, cardHeight = 8) {
+  const pose = ringPoseQuaternion(orientation, axis);
   const ringPoints = Array.from({ length: count }, (_, index) => {
     const angle = (count - 1 - index) / count * Math.PI * 2;
-    return new THREE.Vector3(Math.sin(angle) * radius, 15, Math.cos(angle) * radius)
-      .applyEuler(new THREE.Euler(orientation.x, orientation.y, orientation.z));
+    return new THREE.Vector3(Math.sin(angle) * radius, cardHeight / 2 + 1, Math.cos(angle) * radius)
+      .applyQuaternion(pose).add(RING_CENTER);
   });
   const approach = [
     [-20, 10, -70], [50, 30, -80], [30, 30, -75], [50, 30, -70],

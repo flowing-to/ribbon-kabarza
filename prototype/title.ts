@@ -3,6 +3,7 @@ import sourceVertex from '../src/glsl/text/textVertex.glsl?raw';
 import sourceFragment from '../src/glsl/text/textFragment.glsl?raw';
 import { createTitleMotion } from './title-motion';
 import { DEFAULT_TITLE, type TitleOptions } from './config';
+import { bottomAnchoredOrigin, rotatedBounds, type Bounds } from './spatial';
 
 // Keep the original wave equations in their world units, then project into the
 // container's title area. The original material leaves uTime at its default zero.
@@ -42,9 +43,14 @@ export function createTitle(text: string, intro: boolean) {
   let dirty = true;
   let settings = { ...DEFAULT_TITLE };
   let logicalHeight = 1, padding = 0;
+  let ink: Bounds = { left: 0, right: 0, top: 0, bottom: 0 };
+  let ringTop: number | null = null, originScreenY = 0, lineCount = 1;
 
   function position() {
-    material.uniforms.uOrigin.value.set(width * settings.x, height * (1 - settings.y) - logicalHeight / 2 + padding);
+    originScreenY = settings.anchor === 'ring' && ringTop !== null
+      ? bottomAnchoredOrigin(ringTop, settings.overlapPx, ink, settings.rotation)
+      : height * settings.y + logicalHeight / 2 - padding;
+    material.uniforms.uOrigin.value.set(width * settings.x, height - originScreenY);
     material.uniforms.uRotation.value = settings.rotation;
     material.uniforms.uWaveStrength.value = settings.waveStrength;
   }
@@ -57,6 +63,7 @@ export function createTitle(text: string, intro: boolean) {
       (context as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${-fontSize * 0.05}px`;
     };
     setFont();
+    context.textAlign = 'center'; context.textBaseline = 'alphabetic';
     const maxWidth = width * 0.86;
     const lines: string[] = [];
     for (const paragraph of value.split('\n')) {
@@ -72,6 +79,9 @@ export function createTitle(text: string, intro: boolean) {
       lines.push(line.trimEnd());
     }
     padding = fontSize * 0.3;
+    lineCount = lines.length;
+    const metrics = lines.map(line => context.measureText(line));
+    const ascent = Math.max(fontSize * 0.8, ...metrics.map(metric => metric.actualBoundingBoxAscent));
     const lineHeight = fontSize * 1.02;
     const logicalWidth = Math.max(1, ...lines.map(line => context.measureText(line).width)) + padding * 2;
     logicalHeight = lines.length * lineHeight + padding * 2;
@@ -79,8 +89,19 @@ export function createTitle(text: string, intro: boolean) {
     bitmap.width = Math.max(1, Math.ceil(logicalWidth * ratio));
     bitmap.height = Math.max(1, Math.ceil(logicalHeight * ratio));
     context.setTransform(ratio, 0, 0, ratio, 0, 0); setFont();
-    context.fillStyle = '#fff'; context.textAlign = 'center'; context.textBaseline = 'top';
-    lines.forEach((line, index) => context.fillText(line, logicalWidth / 2, padding + index * lineHeight));
+    context.fillStyle = '#fff'; context.textAlign = 'center'; context.textBaseline = 'alphabetic';
+    ink = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity };
+    lines.forEach((line, index) => {
+      const baseline = padding + ascent + index * lineHeight;
+      context.fillText(line, logicalWidth / 2, baseline);
+      if (!line.trim()) return;
+      const metric = metrics[index];
+      ink.left = Math.min(ink.left, -metric.actualBoundingBoxLeft);
+      ink.right = Math.max(ink.right, metric.actualBoundingBoxRight);
+      ink.top = Math.min(ink.top, baseline - metric.actualBoundingBoxAscent - logicalHeight / 2);
+      ink.bottom = Math.max(ink.bottom, baseline + metric.actualBoundingBoxDescent - logicalHeight / 2);
+    });
+    if (!Number.isFinite(ink.top)) ink = { left: 0, right: 0, top: 0, bottom: 0 };
     // A different title can change the bitmap dimensions. Replace its GPU storage
     // rather than uploading into the previous allocation and retaining old pixels.
     texture.dispose(); texture = new THREE.CanvasTexture(bitmap);
@@ -97,6 +118,7 @@ export function createTitle(text: string, intro: boolean) {
   return {
     setText: motion.setText,
     reset: motion.reset,
+    setRingTop(value: number | null) { ringTop = value; position(); },
     resize(nextWidth: number, nextHeight: number, nextFontSize: number, nextPixelRatio: number, style?: TitleOptions) {
       settings = { ...DEFAULT_TITLE, ...style };
       nextFontSize *= settings.scale;
@@ -117,7 +139,11 @@ export function createTitle(text: string, intro: boolean) {
     render(renderer: THREE.WebGLRenderer) {
       renderer.clearDepth(); renderer.render(scene, camera);
     },
-    getState: motion.getState,
+    getState() {
+      const bounds = rotatedBounds(ink, settings.rotation);
+      return { ...motion.getState(), anchor: settings.anchor, lineCount,
+        settledBounds: { left: width * settings.x + bounds.left, right: width * settings.x + bounds.right, top: originScreenY + bounds.top, bottom: originScreenY + bounds.bottom } };
+    },
     dispose() { mesh.geometry.dispose(); material.dispose(); texture.dispose(); },
   };
 }

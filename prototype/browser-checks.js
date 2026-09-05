@@ -30,6 +30,20 @@
     const context = canvas.getContext('webgl2');
     await idle(instance);
     passed.push('Static carousel stops drawing after image uploads');
+    const initialRim = instance.getStats().foregroundTop.y;
+    for (const spin of [0.8, 2.4]) {
+      instance.update({ rotation: spin }); await idle(instance);
+      const stats = instance.getStats();
+      check(Math.abs(stats.foregroundTop.y - initialRim) < 0.001, 'Spinning moved the ring plane or title anchor');
+      check(Math.abs(stats.title.settledBounds.bottom - stats.foregroundTop.y - 15) < 0.001, 'Title bottom missed the configured overlap');
+    }
+    instance.update({ title: 'One line' }); await idle(instance);
+    const single = instance.getStats().title.settledBounds;
+    instance.update({ title: 'First line\nSecond line\nThird line' }); await idle(instance);
+    const multiline = instance.getStats().title;
+    check(multiline.lineCount === 3 && multiline.settledBounds.top < single.top, 'Extra title lines did not grow upward');
+    check(Math.abs(multiline.settledBounds.bottom - single.bottom) < 0.001, 'Line breaks moved the title bottom');
+    passed.push('Local spin leaves the rim fixed; multiline titles grow upward from the same overlap');
     instance.update({ autoRotate: true, speed: 0 });
     await idle(instance);
     passed.push('Zero rotation speed does not keep a render loop alive');

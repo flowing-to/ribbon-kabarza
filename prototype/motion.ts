@@ -1,7 +1,7 @@
 import { damp } from 'maath/easing';
 
-// Reduce the previous release damping rate by 20%; drag response stays unchanged.
-export const RELEASE_SMOOTH_TIME = 1.2 / 0.8;
+// Default release coast time; higher values retain momentum longer.
+export const RELEASE_SMOOTH_TIME = 1.3;
 
 export type Pulse = { value: number; phase: 'idle' | 'up' | 'down'; closing: boolean; accumulator?: number };
 export function startPulse(pulse: Pulse, closing: boolean) {
