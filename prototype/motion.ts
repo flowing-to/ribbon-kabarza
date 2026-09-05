@@ -1,5 +1,8 @@
 import { damp } from 'maath/easing';
 
+// Reduce the previous release damping rate by 20%; drag response stays unchanged.
+export const RELEASE_SMOOTH_TIME = 1.2 / 0.8;
+
 export type Pulse = { value: number; phase: 'idle' | 'up' | 'down'; closing: boolean; accumulator?: number };
 export function startPulse(pulse: Pulse, closing: boolean) {
   pulse.phase = 'up'; pulse.closing = closing; pulse.accumulator = 0;

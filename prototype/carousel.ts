@@ -4,7 +4,9 @@ import { damp } from 'maath/easing';
 import originalImageVertex from '../src/glsl/image/imageVertex.glsl?raw';
 import { createRibbon } from './ribbon';
 import { INTRO_DURATION, sampleIntro } from './timeline';
-import { startPulse, stepPulse, type Pulse } from './motion';
+import { RELEASE_SMOOTH_TIME, startPulse, stepPulse, type Pulse } from './motion';
+import { createTitle } from './title';
+import { DEFAULT_AXIS, DEFAULT_SELECTION_OFFSET, type TitleOptions, type Vector3Value } from './config';
 
 export interface CarouselItem {
   id: string;
@@ -17,6 +19,22 @@ export interface CarouselOptions {
   items: CarouselItem[];
   title?: string;
   tilt?: number;
+  /** XYZ Euler angles in radians. Supersedes the legacy Z-only tilt option. */
+  orientation?: Vector3Value;
+  rotationAxis?: Vector3Value;
+  /** Initial spin in radians; updating this sets the current spin immediately. */
+  rotation?: number;
+  cardWidth?: number;
+  cardHeight?: number;
+  cameraFov?: number;
+  cameraDistanceScale?: number;
+  selectionAngle?: number;
+  selectedScale?: number;
+  selectionOffset?: Vector3Value;
+  releaseDamping?: number;
+  text?: TitleOptions;
+  /** Empty arc between adjacent cards, in degrees. Defaults to 1. */
+  gapDegrees?: number;
   autoRotate?: boolean;
   speed?: number;
   windStrength?: number;
@@ -50,15 +68,17 @@ void main() {
 export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOptions) {
   let options = { ...initial };
   validateItems(options.items);
-  let layout = layoutForCount(options.items.length);
+  validateTuning(options);
+  let layout = layoutForCount(options.items.length, options.gapDegrees, options.cardWidth, options.cardHeight);
   let destroyed = false;
   let generation = 0;
   let frameId = 0;
   let width = 1, height = 1;
-  let rotationTarget = 0, velocity = 0;
-  const rotation = { value: 0 };
-  const inertia = { value: 0 };
-  const wind = { value: 0 };
+  let rotationTarget = options.rotation ?? 0, velocity = 0;
+  let rotation = { value: rotationTarget };
+  let inertia = { value: 0 };
+  let wind = { value: 0 };
+  let renderedFrames = 0;
   let hovered = false;
   let introElapsed = 0;
   let introFinished = initial.intro === false;
@@ -79,10 +99,10 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
   shadow.innerHTML = `<style>
     :host{font-family:Arial,sans-serif;color:#151713}
     canvas{display:block;width:100%;height:100%;touch-action:pan-y;outline-offset:-4px}
-    h2{position:absolute;z-index:1;top:9%;left:7%;right:7%;margin:0;text-align:center;font-weight:500;font-size:clamp(22px,5cqw,70px);line-height:1.02;letter-spacing:-.05em;pointer-events:none}
+    h2{position:absolute;z-index:1;top:9%;left:7%;right:7%;margin:0;text-align:center;font-weight:500;font-size:var(--title-size,22px);line-height:1.02;letter-spacing:-.05em;pointer-events:none}
     .ui{position:absolute;bottom:20px;left:20px;right:20px;display:flex;justify-content:space-between;align-items:center;gap:10px;z-index:2}
     .buttons{display:flex;gap:6px}button{border:1px solid #15171333;background:#ffffffb8;color:inherit;border-radius:50%;width:40px;height:40px;cursor:pointer;font-size:20px}
-    button:focus-visible{outline:2px solid #151713;outline-offset:2px}.status{font-size:12px;letter-spacing:.02em} [hidden]{display:none!important}
+    button:focus-visible{outline:2px solid #151713;outline-offset:2px}.status{min-width:0;flex:1;font-size:12px;letter-spacing:.02em} [hidden]{display:none!important}
   </style><h2></h2><div class="ui"><span class="status" aria-live="polite">Drag to explore</span><div class="buttons"><button class="prev" aria-label="Previous card">←</button><button class="next" aria-label="Next card">→</button><button class="close" aria-label="Close selected card" hidden>×</button></div></div>`;
   root.style.containerType = 'inline-size';
   container.append(root);
@@ -101,19 +121,26 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     throw error;
   }
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.autoClear = false;
+  renderer.info.autoReset = false;
+  const titleEffect = createTitle(title.textContent!, initial.intro !== false && !reducedMotion.matches);
+  // Retain the semantic heading; its visible counterpart is rendered by the shader.
+  title.style.color = 'transparent';
   const canvas = renderer.domElement;
   canvas.tabIndex = 0;
   canvas.setAttribute('role', 'region');
   canvas.setAttribute('aria-label', 'Image carousel. Use arrow keys to select a card and Escape to close.');
   shadow.prepend(canvas);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1200);
+  const camera = new THREE.PerspectiveCamera(options.cameraFov ?? 50, 1, 0.1, 1200);
   const ring = new THREE.Group();
-  const ringBase = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, options.tilt ?? -0.1));
+  function orientation() { return options.orientation ?? { x: 0, y: 0, z: options.tilt ?? -0.1 }; }
+  const initialOrientation = orientation();
+  const ringBase = new THREE.Quaternion().setFromEuler(new THREE.Euler(initialOrientation.x, initialOrientation.y, initialOrientation.z));
   ring.quaternion.copy(ringBase);
   scene.add(ring);
   let geometry = cardGeometry();
-  let ribbon = createRibbon(options.items.length, layout.radius);
+  let ribbon = createRibbon(options.items.length, layout.radius, orientation());
   scene.add(ribbon.mesh);
   ribbon.enhance(options.fabric);
   const dummy = new THREE.DataTexture(new Uint8Array([220, 220, 215, 255]), 1, 1);
@@ -129,7 +156,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
   const restCamera = new THREE.Vector3();
   const cameraTarget = new THREE.Vector3();
   const inverseRing = new THREE.Quaternion();
-  const rotationAxis = new THREE.Vector3(-0.1, -1, 0).normalize();
+  const rotationAxis = new THREE.Vector3().copy(options.rotationAxis ?? DEFAULT_AXIS).normalize();
   const worldPosition = new THREE.Vector3();
   const referenceView = new THREE.Vector3(introEnd.cameraX - introEnd.lookX, introEnd.cameraY - introEnd.lookY, introEnd.cameraZ);
 
@@ -201,9 +228,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       mesh.userData.index = index;
       // Shader deformation can move vertices outside the flat geometry's bounds.
       mesh.frustumCulled = false;
-      const angle = (options.items.length - 1 - index) * layout.step;
-      mesh.position.set(Math.sin(angle) * layout.radius, 10, Math.cos(angle) * layout.radius);
-      mesh.rotation.y = angle;
+      positionCard(mesh, index);
       const group = new THREE.Group();
       group.add(mesh); ring.add(group);
       queue.push({ index, full: false, generation, url: item.previewSrc || item.src });
@@ -214,16 +239,29 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     invalidate();
   }
 
+  function positionCard(mesh: Card['mesh'], index: number) {
+    const angle = (options.items.length - 1 - index) * layout.step;
+    mesh.position.set(Math.sin(angle) * layout.radius, 10, Math.cos(angle) * layout.radius);
+    mesh.rotation.y = angle;
+    mesh.material.uniforms.uRadius.value = layout.radius;
+    mesh.material.uniforms.uCardAspect.value = layout.width / layout.height;
+  }
+
   function resize() {
     const rect = root.getBoundingClientRect();
     width = Math.max(1, rect.width); height = Math.max(1, rect.height);
+    const titleSize = Math.max(18, Math.min(70, Math.max(22, width * 0.05), height * 0.09));
+    root.style.setProperty('--title-size', `${titleSize}px`);
     // Bound total raster work as well as DPR, including large desktop containers.
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5, Math.sqrt(2_000_000 / (width * height))));
     renderer.setSize(width, height, false);
+    titleEffect.resize(width, height, titleSize, renderer.getPixelRatio(), options.text);
     camera.aspect = width / height;
+    camera.fov = options.cameraFov ?? 50;
     const final = introEnd;
     const fitFactor = THREE.MathUtils.lerp(1.04, 0.82, THREE.MathUtils.smoothstep(camera.aspect, 0.9, 1.5));
-    const depth = Math.max(45, cameraDistance(layout.radius, camera.aspect, camera.fov) * fitFactor);
+    const depth = Math.max(45, cameraDistance(layout.radius, camera.aspect, camera.fov) * fitFactor) * (options.cameraDistanceScale ?? 1);
+    camera.far = Math.max(1200, depth + layout.radius * 3 + 200);
     // Dolly along the original viewing direction so portrait fitting preserves the ring angle.
     restCamera.copy(referenceView).multiplyScalar(depth / Math.abs(final.cameraZ)).add(new THREE.Vector3(final.lookX, final.lookY, 0));
     if (introFinished) { camera.position.copy(restCamera); camera.lookAt(final.lookX, final.lookY, 0); }
@@ -232,24 +270,24 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
   }
 
   function select(index: number) {
-    if (!introFinished) return;
+    if (!introFinished || index === selected) return;
     if (selected >= 0 && selected !== index) {
       if (cards[selected].open > 0.001 || cards[selected].pulse.value > 0.001) startPulse(cards[selected].pulse, true);
       cards[selected].openingStarted = false;
     }
     selected = index;
-    velocity = inertia.value = 0;
+    velocity = 0; inertia = { value: 0 };
     if (index >= 0) {
-      const target = (cards.length - 1 - index) * layout.step - Math.PI + Math.PI / 36;
+      const target = (cards.length - 1 - index) * layout.step - Math.PI + (options.selectionAngle ?? Math.PI / 36);
       rotationTarget = shortestAngle(rotation.value, target);
       cards[index].openingStarted = false;
     }
     title.textContent = index < 0 ? options.title ?? 'Beautiful Designs\nAdvanced Interactions' : options.items[index].title;
+    titleEffect.setText(title.textContent!);
     status.textContent = index < 0 ? 'Drag to explore' : `${index + 1} / ${cards.length} · Click outside to close`;
     close.hidden = index < 0;
     if (index >= 0) upgrade(index);
     options.onSelect?.(index < 0 ? null : options.items[index].id);
-    title.animate(reducedMotion.matches ? [] : [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 500, easing: 'ease-out' });
     invalidate();
   }
 
@@ -260,7 +298,11 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     lastTime = now;
     if ((introFinished && !visible) || document.hidden) return;
     elapsed += dt;
-    if (reducedMotion.matches) introFinished = true;
+    if (reducedMotion.matches) {
+      introFinished = true;
+      rotation = { value: rotationTarget };
+      inertia = { value: 0 }; wind = { value: 0 }; velocity = 0;
+    }
     if (!introFinished) {
       introElapsed += dt;
       if (introElapsed >= INTRO_DURATION) introFinished = true;
@@ -278,7 +320,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     ribbon.update(intro.progress, intro.time);
     const emerging = intro.progress >= ribbon.start;
     if (emerging && selected < 0) {
-      damp(inertia, 'value', gesture?.dragged ? velocity : 0, gesture?.dragged ? 0.12 : 1.2, dt * 0.6);
+      damp(inertia, 'value', gesture?.dragged ? velocity : 0, gesture?.dragged ? 0.12 : (options.releaseDamping ?? RELEASE_SMOOTH_TIME), dt * 0.6);
       const baseSpeed = options.autoRotate !== false && !reducedMotion.matches && !hovered ? options.speed ?? 0.1 : 0;
       currentSpeed = baseSpeed + inertia.value;
       if (!gesture) rotationTarget += currentSpeed * dt;
@@ -288,13 +330,11 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     damp(wind, 'value', selected < 0 ? Math.max(0, Math.abs(currentSpeed) - 0.1) * 0.28 : 0, selected < 0 ? 0.6 : 0.1, dt * 0.6);
     inverseRing.copy(ring.quaternion).invert();
     const focal = 2 * Math.tan(camera.fov * Math.PI / 360);
-    const focusDepth = Math.max(layout.width * 1.2 / (focal * camera.aspect * 0.68), layout.height * 1.2 / (focal * 0.5));
-    const pullForward = Math.max(5, Math.abs(restCamera.z) - layout.radius * 1.2 - focusDepth);
-    focusPosition.set(
-      (pullForward - 5) * referenceView.x / Math.abs(referenceView.z),
-      -9 + (pullForward - 5) * referenceView.y / Math.abs(referenceView.z),
-      -pullForward,
-    ).applyQuaternion(inverseRing);
+    const selectedScale = options.selectedScale ?? 1.2;
+    const offset = options.selectionOffset ?? DEFAULT_SELECTION_OFFSET;
+    const focusDepth = Math.max(layout.width * selectedScale / (focal * camera.aspect * 0.68), layout.height * selectedScale / (focal * 0.5));
+    const extraPull = Math.max(0, Math.abs(restCamera.z) - layout.radius * selectedScale - focusDepth + offset.z);
+    focusPosition.copy(referenceView).multiplyScalar(extraPull / Math.abs(referenceView.z)).add(offset).applyQuaternion(inverseRing);
     let moving = false;
     cards.forEach((card, index) => {
       const aligned = Math.abs(rotation.value - rotationTarget) < 0.2;
@@ -302,12 +342,14 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       if (target && !card.openingStarted) { startPulse(card.pulse, false); card.openingStarted = true; }
       card.open = reducedMotion.matches ? target : THREE.MathUtils.lerp(card.open, target, 1 - Math.pow(0.97, dt * 60));
       if (Math.abs(card.open - target) < 0.0005) card.open = target;
-      card.scale = THREE.MathUtils.lerp(card.scale, target ? 1.2 : 1, 1 - Math.pow(target ? 0.965 : 0.98, dt * 60));
+      const targetScale = target ? selectedScale : 1;
+      card.scale = reducedMotion.matches ? targetScale : THREE.MathUtils.lerp(card.scale, targetScale, 1 - Math.pow(target ? 0.965 : 0.98, dt * 60));
+      if (Math.abs(card.scale - targetScale) < 0.001) card.scale = targetScale;
       card.group.position.copy(focusPosition).multiplyScalar(card.open);
       card.group.scale.setScalar(card.scale);
       if (reducedMotion.matches) { card.pulse.value = 0; card.pulse.phase = 'idle'; }
       else stepPulse(card.pulse, dt);
-      moving ||= card.open !== target || card.pulse.phase !== 'idle' || Math.abs(card.scale - (target ? 1.2 : 1)) > 0.001;
+      moving ||= card.open !== target || card.pulse.phase !== 'idle' || Math.abs(card.scale - targetScale) > 0.001;
       const u = card.mesh.material.uniforms;
       const start = ribbon.start + index * ribbon.emergence / cards.length;
       const end = ribbon.start + (index + 1) * ribbon.emergence / cards.length;
@@ -320,7 +362,13 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     });
     controls.style.opacity = introFinished ? '1' : '0';
     controls.inert = !introFinished;
+    // Always advance the text controller, including when a card is still moving.
+    const titleMoving = titleEffect.update(dt, reducedMotion.matches);
+    moving ||= titleMoving;
+    renderer.info.reset(); renderer.clear();
     renderer.render(scene, camera);
+    titleEffect.render(renderer);
+    renderedFrames++;
     // Upgrade front-facing previews after they are visible; no global readiness gate.
     if (introFinished && elapsed - lastUpgrade > 0.25) {
       lastUpgrade = elapsed;
@@ -329,7 +377,8 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
         if (worldPosition.z < -layout.radius * 0.55) upgrade(index);
       }
     }
-    if (!introFinished || gesture || moving || Math.abs(inertia.value) > 0.002 || Math.abs(rotation.value - rotationTarget) > 0.0001 || Math.abs(wind.value) > 0.001 || (options.autoRotate !== false && !reducedMotion.matches && selected < 0)) invalidate();
+    const autoRotating = options.autoRotate !== false && !reducedMotion.matches && !hovered && selected < 0 && (options.speed ?? 0.1) !== 0;
+    if (!introFinished || gesture || moving || Math.abs(inertia.value) > 0.002 || Math.abs(rotation.value - rotationTarget) > 0.0001 || Math.abs(wind.value) > 0.001 || autoRotating) invalidate();
   }
 
   function hit(event: PointerEvent) {
@@ -365,7 +414,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
   function up(event: PointerEvent) {
     if (!gesture || gesture.id !== event.pointerId) return;
     const dragged = gesture.dragged;
-    if (event.timeStamp - gesture.time > 120) velocity = inertia.value = 0;
+    if (event.timeStamp - gesture.time > 120) { velocity = 0; inertia = { value: 0 }; }
     gesture = null;
     if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
     if (!dragged) { const index = hit(event); select(index === undefined || index === selected ? -1 : index); }
@@ -374,7 +423,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
   function cancel() {
     if (!gesture) return;
     const id = gesture?.id;
-    gesture = null; velocity = 0;
+    gesture = null; velocity = 0; inertia = { value: 0 };
     if (id !== undefined && canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
     invalidate();
   }
@@ -404,43 +453,99 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
   return {
     replayIntro() {
       if (destroyed) return;
+      const wasSelected = selected >= 0;
+      cancel();
       selected = -1; introFinished = false; introElapsed = 0; elapsed = 0;
-      rotation.value = rotationTarget = inertia.value = velocity = 0;
-      for (const card of cards) { card.open = 0; card.scale = 1; card.pulse.value = 0; card.pulse.phase = 'idle'; card.openingStarted = false; }
+      rotationTarget = options.rotation ?? 0; velocity = currentSpeed = lastUpgrade = 0;
+      rotation = { value: rotationTarget }; inertia = { value: 0 }; wind = { value: 0 };
+      for (const card of cards) { card.open = 0; card.scale = 1; card.pulse = { value: 0, phase: 'idle', closing: false }; card.openingStarted = false; }
       title.textContent = options.title ?? 'Beautiful Designs\nAdvanced Interactions'; close.hidden = true; status.textContent = 'Drag to explore';
+      titleEffect.reset(title.textContent!, !reducedMotion.matches);
+      if (wasSelected) options.onSelect?.(null);
       invalidate();
     },
     select(id: string | null) { if (!destroyed) select(id === null ? -1 : options.items.findIndex(item => item.id === id)); },
     update(next: Partial<CarouselOptions>) {
       if (destroyed) return;
       if (next.items) validateItems(next.items);
-      options = { ...options, ...next };
-      ringBase.setFromEuler(new THREE.Euler(0, 0, options.tilt ?? -0.1));
+      const nextOptions = { ...options, ...next, text: { ...options.text, ...next.text } };
+      validateTuning(nextOptions);
+      const nextLayout = layoutForCount(nextOptions.items.length, nextOptions.gapDegrees, nextOptions.cardWidth, nextOptions.cardHeight);
+      const wasSelected = selected >= 0;
+      const rebuildLayout = !!next.items || nextLayout.gapDegrees !== layout.gapDegrees || nextLayout.width !== layout.width || nextLayout.height !== layout.height;
+      const rebuildRibbon = rebuildLayout || nextOptions.tilt !== options.tilt || JSON.stringify(nextOptions.orientation) !== JSON.stringify(options.orientation);
+      options = nextOptions;
+      const angles = orientation();
+      ringBase.setFromEuler(new THREE.Euler(angles.x, angles.y, angles.z));
+      rotationAxis.copy(options.rotationAxis ?? DEFAULT_AXIS).normalize();
+      if (rebuildLayout) {
+        layout = nextLayout;
+        const previous = geometry;
+        geometry = cardGeometry();
+        for (let index = 0; index < cards.length; index++) {
+          cards[index].mesh.geometry = geometry;
+          positionCard(cards[index].mesh, index);
+        }
+        previous.dispose();
+      }
       if (next.items) {
-        selected = -1; rotation.value = rotationTarget = 0; velocity = inertia.value = 0;
-        layout = layoutForCount(next.items.length);
-        geometry.dispose(); geometry = cardGeometry();
-        scene.remove(ribbon.mesh); ribbon.dispose(); ribbon = createRibbon(next.items.length, layout.radius); scene.add(ribbon.mesh); ribbon.enhance(options.fabric);
+        cancel();
+        selected = -1; rotationTarget = options.rotation ?? 0; velocity = currentSpeed = 0;
+        rotation = { value: rotationTarget }; inertia = { value: 0 }; wind = { value: 0 };
         buildCards();
+      }
+      if (rebuildRibbon) {
+        scene.remove(ribbon.mesh); ribbon.dispose();
+        ribbon = createRibbon(options.items.length, layout.radius, orientation());
+        scene.add(ribbon.mesh); ribbon.enhance(options.fabric);
+      } else if (next.fabric) ribbon.enhance(next.fabric);
+      if (next.rotation !== undefined) {
+        cancel(); rotationTarget = next.rotation; rotation = { value: rotationTarget };
+        inertia = { value: 0 }; velocity = 0;
+      } else if (next.selectionAngle !== undefined && selected >= 0) {
+        rotationTarget = shortestAngle(rotation.value, (cards.length - 1 - selected) * layout.step - Math.PI + next.selectionAngle);
       }
       if (next.intro === false) introFinished = true;
       if (selected < 0) { title.textContent = options.title ?? 'Beautiful Designs\nAdvanced Interactions'; close.hidden = true; status.textContent = 'Drag to explore'; }
+      titleEffect.setText(title.textContent!);
+      if (next.intro === false) titleEffect.reset(title.textContent!, false);
       resize();
+      if (next.items && wasSelected) options.onSelect?.(null);
     },
     destroy() {
       if (destroyed) return;
       destroyed = true; generation++; queue = [];
+      cancel();
       cancelAnimationFrame(frameId);
+      frameId = 0;
       observer.disconnect(); visibility.disconnect();
       document.removeEventListener('visibilitychange', invalidate);
       reducedMotion.removeEventListener('change', invalidate);
       for (const card of cards) card.mesh.material.dispose();
       for (const texture of textures) texture.dispose();
-      geometry.dispose(); ribbon.dispose(); dummy.dispose(); renderer.dispose();
+      geometry.dispose(); ribbon.dispose(); titleEffect.dispose(); dummy.dispose(); renderer.dispose();
+      renderer.forceContextLoss();
       root.remove();
     },
-    getStats() { return { introFinished, introElapsed, speed: currentSpeed, wind: wind.value, count: cards.length, width, height, triangles: renderer.info.render.triangles, textures: renderer.info.memory.textures, selected: selected < 0 ? null : options.items[selected].id }; },
+    getStats() { return { introFinished, introElapsed, rotation: rotation.value, speed: currentSpeed, wind: wind.value, title: titleEffect.getState(), count: cards.length, radius: layout.radius, gapDegrees: layout.gapDegrees, cardDegrees: layout.cardAngle * 180 / Math.PI, width, height, triangles: renderer.info.render.triangles, textures: renderer.info.memory.textures, renderedFrames, pendingImages: activeLoads + queue.length, isAnimating: !!frameId, selected: selected < 0 ? null : options.items[selected].id }; },
   };
+}
+
+function validateTuning(options: CarouselOptions) {
+  for (const key of ['tilt', 'rotation', 'speed', 'selectionAngle'] as const) {
+    if (options[key] !== undefined && !Number.isFinite(options[key])) throw new RangeError(`${key} must be finite.`);
+  }
+  for (const key of ['cameraDistanceScale', 'selectedScale', 'releaseDamping'] as const) {
+    if (options[key] !== undefined && (!Number.isFinite(options[key]) || options[key]! <= 0)) throw new RangeError(`${key} must be positive.`);
+  }
+  if (options.cameraFov !== undefined && (!Number.isFinite(options.cameraFov) || options.cameraFov <= 0 || options.cameraFov >= 180)) throw new RangeError('Camera FOV must be between 0 and 180 degrees.');
+  for (const value of [options.orientation, options.rotationAxis, options.selectionOffset]) {
+    if (value && ![value.x, value.y, value.z].every(Number.isFinite)) throw new RangeError('Vector components must be finite.');
+  }
+  if (options.rotationAxis && Math.hypot(options.rotationAxis.x, options.rotationAxis.y, options.rotationAxis.z) === 0) throw new RangeError('Rotation axis cannot be zero.');
+  for (const [key, value] of Object.entries(options.text ?? {})) {
+    if (!Number.isFinite(value) || (['scale', 'transitionSpeed'].includes(key) && value <= 0) || (key === 'waveStrength' && value < 0)) throw new RangeError(`Invalid text ${key}.`);
+  }
 }
 
 function validateItems(items: CarouselItem[]) {

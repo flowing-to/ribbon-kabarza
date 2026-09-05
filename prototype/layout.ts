@@ -1,14 +1,23 @@
 export const TAU = Math.PI * 2;
 
-export function layoutForCount(count: number) {
+export function layoutForCount(count: number, gapDegrees = 1, width = 13.8, height = 8) {
   if (!Number.isInteger(count) || count < 3 || count > 20) {
     throw new RangeError('The carousel requires between 3 and 20 items.');
   }
+  if (!Number.isFinite(gapDegrees) || gapDegrees < 0 || count * gapDegrees >= 360) {
+    throw new RangeError('The angular gap must be nonnegative and leave room for every card within 360 degrees.');
+  }
+  if (![width, height].every(value => Number.isFinite(value) && value > 0)) {
+    throw new RangeError('Card width and height must be finite positive numbers.');
+  }
   // Keep the original world units so shader frequencies/amplitudes retain meaning.
-  const width = 13.8;
-  const height = 8;
-  const radius = Math.max(10, count * 26 / 12);
-  return { width, height, radius, step: TAU / count };
+  const gapAngle = gapDegrees * Math.PI / 180;
+  const step = TAU / count;
+  const cardAngle = step - gapAngle;
+  // Width is arc length on the curved surface: width = radius * cardAngle.
+  // N cards plus N gaps fill exactly one circumference, including the seam.
+  const radius = width / cardAngle;
+  return { width, height, radius, step, cardAngle, gapAngle, gapDegrees };
 }
 
 export function cameraDistance(radius: number, aspect: number, fov: number) {

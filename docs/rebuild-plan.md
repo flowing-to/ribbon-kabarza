@@ -2,6 +2,10 @@
 
 Status: motion-aligned carousel and initial ribbon are available at `/prototype/` for visual review. The original shader equations, world units and exported intro curves are reused; the user's trace informs motion timing. See `prototype/README.md` for checks and limitations.
 
+Checkpoint 1 is commit `86f1b43`. Subsequent work covers idle rendering, reduced-motion selection, responsive title sizing, replay/update state reset and explicit context cleanup, with repeatable browser checks.
+
+The review now also has an angular gap budget, original shader title transitions and an isolated Tweakpane panel. Tuning values live in the review module and reach the renderer only through its public numeric options; the renderer owns animation state. There is no persistence. Copying settings exports JSON for manual sharing. A build guard prevents debug UI modules from entering the standalone library.
+
 ## Agreed requirements
 
 - Preserve the tilted circular carousel, curved cards, drag rotation with momentum and wind deformation.
@@ -27,7 +31,7 @@ Inspected the source on `aykut-changes` and ran it locally with agent-browser at
 - Theatre subscriptions are registered during component rendering without cleanup. Several store writes occur every frame. Curve sample arrays are recreated on render, defeating downstream memoization.
 - Current code takes the first twelve sorted DOM items and assumes those textures exist. Loading hooks occur inside loops and a conditional memo callback.
 - A fresh production build produces 1,494.06 kB JavaScript / 440.25 kB gzip. The older checked-in artifact is 2,471,246 bytes / approximately 532 kB gzip. Use the fresh build for subsequent comparisons.
-- Direct imports of `maath` and `zustand` are absent from package.json. For inspection only, local ignored node_modules links expose already-installed transitive versions. Source and lockfiles were not altered.
+- At initial inspection, direct imports of `maath` and `zustand` were absent from package.json. Checkpoint 1 declares the existing versions explicitly and updates both lockfiles.
 
 Browser captures are visual references, not mobile hardware benchmarks. Local development timing is not a production performance baseline. No claim yet that Theatre is the primary bottleneck.
 

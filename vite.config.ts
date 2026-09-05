@@ -7,6 +7,8 @@ import { motionTracePlugin } from "./dev/motion-trace-plugin";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss(), glsl(), motionTracePlugin()],
+  // Linked/isolated package installs must share the original app's React runtime.
+  resolve: { dedupe: ["react", "react-dom", "three", "@react-three/fiber"] },
   // base: 'https://flowing-canvas.vercel.app/',
   server: {
     host: "0.0.0.0",

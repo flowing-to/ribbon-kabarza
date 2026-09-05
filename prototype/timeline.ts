@@ -46,6 +46,14 @@ const cameraZ = track('Camera', '["position","z"]');
 const lookX = track('lookAt', '["position","x"]');
 const lookY = track('lookAt', '["position","y"]');
 export const INTRO_DURATION = 4.267;
+const textTracks = ['txtProgress1', 'txtProgress2', 'txtProgress3'].map(name => track(name as keyof typeof tracks, '["x"]'));
+export const TEXT_INTRO_END = 6.733;
+export const TEXT_EXIT_END = 7.767;
+export const TEXT_ENTER_END = 9.267;
+
+export function sampleText(seconds: number): [number, number, number] {
+  return textTracks.map(keys => evaluateTrack(keys, seconds)) as [number, number, number];
+}
 
 export function sampleIntro(seconds: number) {
   return {

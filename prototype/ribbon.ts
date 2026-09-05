@@ -4,6 +4,7 @@ import sourceFragment from '../src/glsl/ribbon/ribbonFragment.glsl?raw';
 import ambient from '../src/glsl/includes/ambientLight.glsl?raw';
 import directional from '../src/glsl/includes/directionalLight.glsl?raw';
 import point from '../src/glsl/includes/pointLight.glsl?raw';
+import type { Vector3Value } from './config';
 
 const vertexShader = sourceVertex.replace(
   'smoothstep(fadeEndT, fadeStartT, abs(t - 0.5))',
@@ -14,11 +15,11 @@ const fragmentShader = sourceFragment
   .replace('#include "../includes/directionalLight.glsl";', directional)
   .replace('#include "../includes/pointLight.glsl";', point);
 
-export function createRibbon(count: number, radius: number) {
+export function createRibbon(count: number, radius: number, orientation: Vector3Value = { x: 0, y: 0, z: -0.1 }) {
   const ringPoints = Array.from({ length: count }, (_, index) => {
     const angle = (count - 1 - index) / count * Math.PI * 2;
     return new THREE.Vector3(Math.sin(angle) * radius, 15, Math.cos(angle) * radius)
-      .applyEuler(new THREE.Euler(0, 0, -0.1));
+      .applyEuler(new THREE.Euler(orientation.x, orientation.y, orientation.z));
   });
   const approach = [
     [-20, 10, -70], [50, 30, -80], [30, 30, -75], [50, 30, -70],
@@ -63,6 +64,7 @@ export function createRibbon(count: number, radius: number) {
   const start = lengths[130] / curve.getLength() - 0.01;
   const emergence = lengths[10 * (13 + count)] / curve.getLength() - start;
   let disposed = false;
+  let enhancement = 0;
   return {
     mesh, start, emergence,
     update(progress: number, time: number) {
@@ -72,11 +74,14 @@ export function createRibbon(count: number, radius: number) {
     },
     enhance(urls?: { color: string; normal: string }) {
       if (!urls) return;
+      const version = ++enhancement;
       for (const [key, url] of [['uFabricTexture', urls.color], ['uFabricTextureNormal', urls.normal]]) {
         new THREE.TextureLoader().loadAsync(url).then(texture => {
-          if (disposed) { texture.dispose(); return; }
+          if (disposed || version !== enhancement) { texture.dispose(); return; }
           texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
           if (key === 'uFabricTexture') texture.colorSpace = THREE.SRGBColorSpace;
+          const previous = material.uniforms[key].value as THREE.Texture;
+          owned.delete(previous); previous.dispose();
           owned.add(texture); material.uniforms[key].value = texture;
         }).catch(() => { /* The base fabric remains visible without maps. */ });
       }
