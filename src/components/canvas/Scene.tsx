@@ -7,7 +7,8 @@ import {
   useProgress,
   useTexture,
 } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, addAfterEffect } from "@react-three/fiber";
+import { recordMotionFrame, setMotionTraceCanvas } from "../../../dev/motion-trace";
 import { getProject, types } from "@theatre/core";
 import { SheetProvider } from "@theatre/r3f";
 import { Leva } from "leva";
@@ -36,6 +37,7 @@ function PreloadAssets() {
 }
 
 export default function Scene() {
+  useEffect(() => addAfterEffect(recordMotionFrame), []);
   const [animationStart, setAnimationStart] = useState(false);
   const { total, progress } = useProgress();
   const [readyToStart, setReadyToStart] = useState(false);
@@ -139,6 +141,7 @@ export default function Scene() {
           precision: "highp",
         }}
         onCreated={({ gl }) => {
+          setMotionTraceCanvas(gl.domElement);
           gl.clearDepth();
           gl.toneMapping = THREE.NoToneMapping;
           gl.getContext().getExtension("OES_texture_float");

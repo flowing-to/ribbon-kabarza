@@ -2,17 +2,17 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import glsl from "vite-plugin-glsl";
+import { motionTracePlugin } from "./dev/motion-trace-plugin";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), glsl()],
+  plugins: [react(), tailwindcss(), glsl(), motionTracePlugin()],
   // base: 'https://flowing-canvas.vercel.app/',
   server: {
     host: "0.0.0.0",
     // Allow any origin and all CORS settings
     cors: true,
     hmr: {
-      host: "localhost",
       protocol: "ws",
     },
     allowedHosts: true,

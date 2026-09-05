@@ -1,7 +1,8 @@
 import { ThreeEvent, useFrame } from "@react-three/fiber";
 import { easing } from "maath";
 import type { Ref } from "react";
-import { forwardRef, MutableRefObject, useLayoutEffect, useRef } from "react";
+import { forwardRef, MutableRefObject, useEffect, useLayoutEffect, useRef } from "react";
+import { registerMotionSource } from "../../../dev/motion-trace";
 import * as THREE from "three";
 import { BASE_SPEED, useMomentum } from "./constants";
 import { ImageShaderMaterial, type IimageShaderMaterial } from "./Experience";
@@ -129,6 +130,17 @@ export const CarouselImage = forwardRef<THREE.Mesh, CarouselImageProps>(
     const animationState = useRef<
       "idle" | "damping-up" | "damping-down" | "scaledUp"
     >("idle");
+
+    useEffect(() => registerMotionSource(`card-${index + 1}`, () => ({
+      state: animationState.current, selected: isSelected.current,
+      position: carouselRef.current?.position.toArray(), scale: carouselRef.current?.scale.toArray(),
+      quaternion: carouselRef.current?.quaternion.toArray(),
+      worldMatrix: meshRef.current?.matrixWorld.toArray(),
+      progress: localMatRef.current?.uniforms.uProgress.value,
+      velocity: localMatRef.current?.uniforms.uVelocity.value,
+      time: localMatRef.current?.uniforms.uTime.value,
+      offset: localMatRef.current?.uniforms.uOffset.value,
+    })), [index]);
 
     useFrame((state) => {
       if (!m) return;

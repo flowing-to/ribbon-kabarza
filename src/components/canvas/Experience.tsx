@@ -58,6 +58,7 @@ import {
   yOffset,
 } from "./constants";
 import TitleText from "./TitleText";
+import { registerMotionSource } from "../../../dev/motion-trace";
 
 extendBentPlane();
 
@@ -362,8 +363,23 @@ export default function Experience({
 
   const dxLerp = useRef(0);
   const prevDx = useRef(0);
+  const frameDelta = useRef(0);
+
+  useEffect(() => registerMotionSource('carousel', () => ({
+    dt: frameDelta.current,
+    progress: progressRef.current, time: timeRef.current,
+    quaternion: carouselRef.current?.quaternion.toArray(),
+    targetQuaternion: targetQuaternion.current?.toArray(),
+    continuousQuaternion: targetQuaternionContinuous.current.toArray(),
+    camera: cameraRef.current && { position: cameraRef.current.position.toArray(), quaternion: cameraRef.current.quaternion.toArray(), fov: cameraRef.current.fov, aspect: cameraRef.current.aspect },
+    momentum: momentum.current, defaultMomentum: defaultMomentum.current, dragMomentum: dragMomentum.current,
+    pointerVelocity: pointerVelocity.current, dxLerp: dxLerp.current,
+    speed: carouselSpeed.current, hovered: hovered.current, pointerDown: pointerDown.current,
+    selected: currentImage.current, rotationDone: rotationDone.current, clicked: clicked.current,
+  })), []);
 
   useFrame((state, delta) => {
+    frameDelta.current = delta;
     const isRibbonAtCarousel = progressRef.current >= carouselStartPoint;
 
     if (planeRef.current) {
