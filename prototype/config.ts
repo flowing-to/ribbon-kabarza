@@ -18,4 +18,5 @@ export interface TitleOptions {
 
 export const DEFAULT_TITLE = { anchor: 'ring' as 'ring' | 'container', overlapPx: 15, x: 0.5, y: 0.09, scale: 1.57, rotation: 0, waveStrength: 1, transitionSpeed: 1 };
 export const DEFAULT_AXIS: Vector3Value = { x: 0, y: -1, z: 0 };
+export const DEFAULT_ORIENTATION: Vector3Value = { x: 0, y: 27.4 * Math.PI / 180, z: -0.1 };
 export const DEFAULT_SELECTION_OFFSET: Vector3Value = { x: 0, y: -9, z: -5 };

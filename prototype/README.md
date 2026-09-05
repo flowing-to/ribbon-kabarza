@@ -28,6 +28,8 @@ A custom-element wrapper, production fallbacks and final mobile art direction re
 
 For a static shareable playground, run `bunx vite build --config prototype/share.vite.config.ts`. This writes the review page, controls and public assets to `dist/share`; serve that directory and open `/prototype/`. Rebuild after changes to update the shared copy. On this machine, Tailscale Funnel serves it at `https://codingvm.tail48c94d.ts.net:8443/prototype/`; disable that endpoint with `tailscale funnel --https=8443 off`.
 
+For standalone production timing without Tweakpane, use `standalone.html` and `measure-performance.mjs` with the built library. See the [45 ms latency measurements and bundle comparison](../docs/performance-2026-09-05.md) for results and reproduction commands.
+
 ```ts
 import { mountRibbonCarousel } from './carousel';
 
@@ -36,7 +38,7 @@ const instance = mountRibbonCarousel(element, {
   title: 'Beautiful Designs\nAdvanced Interactions',
   intro: true,
   gapDegrees: 1,
-  orientation: { x: 0, y: 0, z: -0.1 }, // radians; supersedes legacy tilt
+  orientation: { x: 0, y: 27.4 * Math.PI / 180, z: -0.1 }, // radians; supersedes legacy tilt
   rotationAxis: { x: 0, y: -1, z: 0 },
   text: { anchor: 'ring', overlapPx: 15, x: 0.5, scale: 1.57, rotation: 0, waveStrength: 1, transitionSpeed: 1 },
   fabric: { color: '/previews/linen/color.jpg', normal: '/previews/linen/normal.jpg' },

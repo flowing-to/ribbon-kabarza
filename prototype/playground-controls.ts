@@ -1,14 +1,14 @@
 // This module is imported only by the review page, never by the library entry.
 import { Pane } from 'tweakpane';
 import type { CarouselItem, CarouselOptions, mountRibbonCarousel } from './carousel';
-import { DEFAULT_AXIS, DEFAULT_SELECTION_OFFSET, DEFAULT_TITLE } from './config';
+import { DEFAULT_AXIS, DEFAULT_ORIENTATION, DEFAULT_SELECTION_OFFSET, DEFAULT_TITLE } from './config';
 import { RELEASE_SMOOTH_TIME } from './motion';
 
 const radians = (degrees: number) => degrees * Math.PI / 180;
 const degrees = (value: number) => value * 180 / Math.PI;
 const defaults = {
   count: 12, gap: 1, radius: 0, cardAngle: 29, cardWidth: 13.8, cardHeight: 8,
-  tiltX: 0, tiltY: 0, tiltZ: degrees(-0.1), spin: 0,
+  tiltX: degrees(DEFAULT_ORIENTATION.x), tiltY: degrees(DEFAULT_ORIENTATION.y), tiltZ: degrees(DEFAULT_ORIENTATION.z), spin: 0,
   axisX: DEFAULT_AXIS.x, axisY: DEFAULT_AXIS.y, axisZ: DEFAULT_AXIS.z,
   autoRotate: true, speed: 0.1, wind: 1, coastTime: RELEASE_SMOOTH_TIME,
   fov: 50, cameraDistance: 1,

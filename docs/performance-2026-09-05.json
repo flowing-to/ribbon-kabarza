@@ -1,0 +1,123 @@
+{
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/149.0.7827.155",
+    "revision": "@07b52360cc15066f987c910ab34dfbcd4a8778d2",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36",
+    "jsVersion": "14.9.207.29"
+  },
+  "latencyMs": 45,
+  "bandwidth": "unlimited",
+  "cpuSlowdown": 1,
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "deviceScaleFactor": 1,
+    "mobile": false
+  },
+  "cache": "disabled; fresh browser context per navigation",
+  "gzip": true,
+  "bundle": "dist/prototype/ribbon-carousel.js",
+  "bundleSizes": {
+    "baselineCommit": "1c66386",
+    "gzipLevel": 9,
+    "before": {
+      "rawBytes": 1494062,
+      "gzipBytes": 438930
+    },
+    "now": {
+      "rawBytes": 865203,
+      "gzipBytes": 187041
+    }
+  },
+  "configuration": {
+    "cards": 12,
+    "tiltYDegrees": 27.4,
+    "textScale": 1.57,
+    "coastTime": 1.3,
+    "tweakpane": false
+  },
+  "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "samples": [
+    {
+      "run": 1,
+      "timingsMs": {
+        "first-paint": 76,
+        "first-contentful-paint": 284,
+        "carousel-module-ready": 114.9,
+        "carousel-mounted": 151,
+        "carousel-first-render-submitted": 180.4,
+        "carousel-intro-complete": 4530.3
+      },
+      "documentDurationMs": 47.0,
+      "bundleRequestDurationMs": 49.3,
+      "bundleTransferBytes": 187041,
+      "runtimeErrors": []
+    },
+    {
+      "run": 2,
+      "timingsMs": {
+        "first-paint": 84,
+        "first-contentful-paint": 288,
+        "carousel-module-ready": 117,
+        "carousel-mounted": 153.5,
+        "carousel-first-render-submitted": 183,
+        "carousel-intro-complete": 4510.1
+      },
+      "documentDurationMs": 47.9,
+      "bundleRequestDurationMs": 49.9,
+      "bundleTransferBytes": 187041,
+      "runtimeErrors": []
+    },
+    {
+      "run": 3,
+      "timingsMs": {
+        "first-paint": 80,
+        "first-contentful-paint": 288,
+        "carousel-module-ready": 117.1,
+        "carousel-mounted": 156.5,
+        "carousel-first-render-submitted": 185.7,
+        "carousel-intro-complete": 4524.2
+      },
+      "documentDurationMs": 47.7,
+      "bundleRequestDurationMs": 50.5,
+      "bundleTransferBytes": 187041,
+      "runtimeErrors": []
+    },
+    {
+      "run": 4,
+      "timingsMs": {
+        "first-paint": 68,
+        "first-contentful-paint": 296,
+        "carousel-module-ready": 118.9,
+        "carousel-mounted": 160.1,
+        "carousel-first-render-submitted": 191.2,
+        "carousel-intro-complete": 4509.9
+      },
+      "documentDurationMs": 47.2,
+      "bundleRequestDurationMs": 50.2,
+      "bundleTransferBytes": 187041,
+      "runtimeErrors": []
+    },
+    {
+      "run": 5,
+      "timingsMs": {
+        "first-paint": 72,
+        "first-contentful-paint": 292,
+        "carousel-module-ready": 115.6,
+        "carousel-mounted": 155.4,
+        "carousel-first-render-submitted": 185.7,
+        "carousel-intro-complete": 4532.7
+      },
+      "documentDurationMs": 47.4,
+      "bundleRequestDurationMs": 49.5,
+      "bundleTransferBytes": 187041,
+      "runtimeErrors": []
+    }
+  ],
+  "filmstrip": {
+    "note": "Separate instrumented run; not included in timing medians. First recognizable ribbon is bracketed by the last blank and first ribbon frames.",
+    "lastBlankMs": 453.316,
+    "firstRibbonMs": 474.0
+  }
+}

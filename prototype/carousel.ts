@@ -6,7 +6,7 @@ import { createRibbon } from './ribbon';
 import { INTRO_DURATION, sampleIntro } from './timeline';
 import { RELEASE_SMOOTH_TIME, startPulse, stepPulse, type Pulse } from './motion';
 import { createTitle } from './title';
-import { DEFAULT_AXIS, DEFAULT_SELECTION_OFFSET, type TitleOptions, type Vector3Value } from './config';
+import { DEFAULT_AXIS, DEFAULT_ORIENTATION, DEFAULT_SELECTION_OFFSET, type TitleOptions, type Vector3Value } from './config';
 import { createForegroundProjection, RING_CENTER, ringPoseQuaternion } from './spatial';
 
 export interface CarouselItem {
@@ -138,7 +138,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
   const ring = new THREE.Group();
   const ringPose = new THREE.Group();
   ringPose.position.copy(RING_CENTER);
-  function orientation() { return options.orientation ?? { x: 0, y: 0, z: options.tilt ?? -0.1 }; }
+  function orientation() { return options.orientation ?? { ...DEFAULT_ORIENTATION, z: options.tilt ?? DEFAULT_ORIENTATION.z }; }
   ringPose.quaternion.copy(ringPoseQuaternion(orientation(), options.rotationAxis ?? DEFAULT_AXIS));
   ringPose.add(ring); scene.add(ringPose);
   let geometry = cardGeometry();

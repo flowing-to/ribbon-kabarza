@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Standalone ribbon carousel</title>
+  <link rel="icon" href="data:,">
+  <style>html,body{margin:0;background:#d8d8d8}#carousel{width:100%;height:100svh;overflow:hidden}</style>
+</head>
+<body>
+  <div id="carousel"></div>
+  <script type="module">
+    import { mountRibbonCarousel } from '/ribbon-carousel.js';
+    performance.mark('carousel-module-ready');
+    const titles = ['Hero Sections', 'Nav Menus', 'Sliders', 'Footers', 'Creative Sections', 'WebGL Effects', 'Buttons', 'Transitions', 'Loaders', '3D Effects', 'Hover Animations', 'Creative Coding'];
+    const carousel = mountRibbonCarousel(document.querySelector('#carousel'), {
+      items: titles.map((title, index) => ({ id: `card-${index + 1}`, title,
+        previewSrc: `/previews/img${index + 1}_.webp`, src: `/images/img${index + 1}_.webp` })),
+      title: 'Beautiful Designs\nAdvanced Interactions',
+      fabric: { color: '/previews/linen/color.jpg', normal: '/previews/linen/normal.jpg' },
+    });
+    performance.mark('carousel-mounted');
+    // Fixture-only measurement. No benchmark or debug UI enters the library.
+    window.ribbonBenchmark = carousel;
+    let submitted = false;
+    function observe() {
+      const stats = carousel.getStats();
+      if (!submitted && stats.renderedFrames > 0) {
+        performance.mark('carousel-first-render-submitted');
+        submitted = true;
+      }
+      if (stats.introFinished) performance.mark('carousel-intro-complete');
+      else requestAnimationFrame(observe);
+    }
+    requestAnimationFrame(observe);
+  </script>
+</body>
+</html>
