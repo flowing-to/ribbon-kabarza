@@ -6,7 +6,7 @@ This is a new plain Three.js implementation, with no React, R3F or Theatre runti
 
 The ribbon starts when the renderer is ready, without waiting for images. Its path, spatial deformation, material shading and exported Bezier animation curves come from the original. Optional small fabric maps enhance a procedural base and never block the intro. **Replay intro** on the review page restarts it.
 
-The selected card retains its curved geometry and rotation. Alignment, translation/scale, and the transient opening/closing wave are separate stages. The original image vertex shader and maath damping are reused; the captured ~60 Hz cadence determines the wave reference step, so it behaves consistently at 30/60/120 Hz. Wind uses the original damped velocity and squared smoothstep response.
+The selected card retains its curved geometry and rotation. Alignment, translation/scale, and the transient opening/closing wave are separate stages. The original image vertex shader and maath damping are reused; the captured ~60 Hz cadence determines the wave reference step, so it behaves consistently at 30/60/120 Hz. Wind retains the original shader deformation, driven by raw drag velocity and a capped acceleration contribution with fast attack and a gentler fade.
 
 Ring pose and spin now have separate transforms. The outer group sits at the circle center and sets its tilt/axis; its child spins around local Y. Changing tilt cannot make the ring precess or move its center during rotation. The axis option orients the entire circle and defaults to `{ x: 0, y: -1, z: 0 }`; it no longer applies an off-plane world-space spin. Selection computes the front direction in that local frame. The ribbon's ring segment uses the same pose and pivot.
 
@@ -14,7 +14,7 @@ Titles default to `text: { anchor: 'ring', overlapPx: 15 }`. The top rim's foreg
 
 Titles now reuse the original wave vertex shader, three-layer noise fragment shader and exported timing curves. A canvas alpha mask replaces the Troika font runtime and is rasterized only when text or size changes; it uses the existing Arial appearance without a font download. The initial title reveals around 3.97–6.73 seconds; subsequent changes exit in about 0.69 seconds and enter in 1.5 seconds. An interrupted transition keeps its current progress and reveals the latest requested title. Reduced motion skips it. The DOM heading remains available to assistive technology.
 
-Release coast time defaults to `1.3` and can be adjusted in Tweakpane. Higher values retain momentum longer. Direct drag response and wind equations are unchanged.
+Release coast time defaults to `1.3` and can be adjusted in Tweakpane. Higher values retain momentum longer. Dragging starts only on a card; empty-space clicks do not interrupt coasting. Clicking away still dismisses an open card. The entrance has a separate speed boost that decays after the ribbon reaches the cards and resets on replay. See [motion calculations and response settings](../docs/motion-behavior.md) for the exact drag, release, intro and wind behavior.
 
 A custom-element wrapper, production fallbacks and final mobile art direction remain outside this review. The composition and motion are aligned with the reference, not guaranteed pixel-identical.
 
@@ -70,9 +70,12 @@ bun run build
 # With the dev server and agent-browser running:
 agent-browser --session ribbon-audit open http://127.0.0.1:5174/prototype/
 agent-browser --session ribbon-audit eval --stdin < prototype/browser-checks.js
+agent-browser --session ribbon-audit eval --stdin < prototype/pointer-checks.js
+agent-browser --session ribbon-audit eval --stdin < prototype/intro-checks.js
 # Repeat with reduced motion:
 agent-browser --session ribbon-audit set media reduced-motion
 agent-browser --session ribbon-audit eval --stdin < prototype/browser-checks.js
+agent-browser --session ribbon-audit eval --stdin < prototype/intro-checks.js
 agent-browser --session ribbon-audit set media light
 ```
 

@@ -4,7 +4,7 @@ import { damp } from 'maath/easing';
 import originalImageVertex from '../src/glsl/image/imageVertex.glsl?raw';
 import { createRibbon } from './ribbon';
 import { INTRO_DURATION, sampleIntro } from './timeline';
-import { RELEASE_SMOOTH_TIME, startPulse, stepPulse, type Pulse } from './motion';
+import { RELEASE_SMOOTH_TIME, createIntroSpin, createWindMotion, startPulse, stepPulse, type Pulse } from './motion';
 import { createTitle } from './title';
 import { DEFAULT_AXIS, DEFAULT_ORIENTATION, DEFAULT_SELECTION_OFFSET, type TitleOptions, type Vector3Value } from './config';
 import { createForegroundProjection, RING_CENTER, ringPoseQuaternion } from './spatial';
@@ -79,7 +79,8 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
   let rotationTarget = options.rotation ?? 0, velocity = 0;
   let rotation = { value: rotationTarget };
   let inertia = { value: 0 };
-  let wind = { value: 0 };
+  let introSpin = createIntroSpin(initial.intro !== false && initial.autoRotate !== false && initial.speed !== 0);
+  const wind = createWindMotion();
   let renderedFrames = 0;
   let hovered = false;
   let introElapsed = 0;
@@ -282,6 +283,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       cards[selected].openingStarted = false;
     }
     selected = index;
+    introSpin.cancel();
     velocity = 0; inertia = { value: 0 };
     if (index >= 0) {
       const target = selectionRotation(index);
@@ -312,9 +314,10 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     if ((introFinished && !visible) || document.hidden) return;
     elapsed += dt;
     if (reducedMotion.matches) {
+      introSpin.cancel();
       introFinished = true;
       rotation = { value: rotationTarget };
-      inertia = { value: 0 }; wind = { value: 0 }; velocity = 0;
+      inertia = { value: 0 }; wind.reset(); velocity = 0;
     }
     if (!introFinished) {
       introElapsed += dt;
@@ -332,10 +335,11 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     if (introFinished) camera.lookAt(final.lookX, final.lookY, 0);
     ribbon.update(intro.progress, intro.time);
     const emerging = intro.progress >= ribbon.start;
+    const entranceSpeed = introSpin.update(dt, emerging);
     if (emerging && selected < 0) {
       damp(inertia, 'value', gesture?.dragged ? velocity : 0, gesture?.dragged ? 0.12 : (options.releaseDamping ?? RELEASE_SMOOTH_TIME), dt * 0.6);
       const baseSpeed = options.autoRotate !== false && !reducedMotion.matches && !hovered ? options.speed ?? 0.1 : 0;
-      currentSpeed = baseSpeed + inertia.value;
+      currentSpeed = baseSpeed + entranceSpeed + inertia.value;
       if (!gesture) rotationTarget += currentSpeed * dt;
     } else currentSpeed = 0;
     damp(rotation, 'value', rotationTarget, selected >= 0 ? 0.25 : 0.1, dt * 0.6);
@@ -343,7 +347,8 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     ring.rotation.set(0, -rotation.value, 0);
     ringPose.updateMatrixWorld(true);
     camera.updateMatrixWorld();
-    damp(wind, 'value', selected < 0 ? Math.max(0, Math.abs(currentSpeed) - 0.1) * 0.28 : 0, selected < 0 ? 0.6 : 0.1, dt * 0.6);
+    const windSpeed = gesture ? (gesture.dragged && now - gesture.time <= 50 ? velocity : 0) : currentSpeed;
+    if (!reducedMotion.matches) wind.update(windSpeed, dt, selected < 0);
     ring.getWorldQuaternion(inverseRing).invert();
     const focal = 2 * Math.tan(camera.fov * Math.PI / 360);
     const selectedScale = options.selectedScale ?? 1.2;
@@ -397,7 +402,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       }
     }
     const autoRotating = options.autoRotate !== false && !reducedMotion.matches && !hovered && selected < 0 && (options.speed ?? 0.1) !== 0;
-    if (!introFinished || gesture || moving || Math.abs(inertia.value) > 0.002 || Math.abs(rotation.value - rotationTarget) > 0.0001 || Math.abs(wind.value) > 0.001 || autoRotating) invalidate();
+    if (!introFinished || introSpin.active || gesture || moving || Math.abs(inertia.value) > 0.002 || Math.abs(rotation.value - rotationTarget) > 0.0001 || Math.abs(wind.value) > 0.001 || autoRotating) invalidate();
   }
 
   function hit(event: PointerEvent) {
@@ -407,14 +412,24 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     return raycaster.intersectObjects(cards.map(card => card.mesh))[0]?.object.userData.index as number | undefined;
   }
   let gesture: { id: number; startX: number; startY: number; lastX: number; time: number; dragged: boolean } | null = null;
+  let outsidePress: { id: number; x: number; y: number } | null = null;
   function down(event: PointerEvent) {
-    if (!introFinished || !event.isPrimary || event.button !== 0) return;
+    if (!introFinished || !event.isPrimary || event.button !== 0 || gesture) return;
+    outsidePress = null;
+    if (hit(event) === undefined) {
+      // Empty space cannot start a drag or alter coasting. Keep only the
+      // information needed to dismiss an already-open card on a short click.
+      if (selected >= 0) outsidePress = { id: event.pointerId, x: event.clientX, y: event.clientY };
+      return;
+    }
     gesture = { id: event.pointerId, startX: event.clientX, startY: event.clientY, lastX: event.clientX, time: event.timeStamp, dragged: false };
+    introSpin.cancel();
     velocity = 0;
     canvas.setPointerCapture(event.pointerId);
     invalidate();
   }
   function move(event: PointerEvent) {
+    if (outsidePress?.id === event.pointerId && Math.hypot(event.clientX - outsidePress.x, event.clientY - outsidePress.y) > 6) outsidePress = null;
     if (!gesture) { hovered = event.pointerType === 'mouse' && hit(event) !== undefined; invalidate(); return; }
     if (gesture.id !== event.pointerId) return;
     const dx = event.clientX - gesture.lastX;
@@ -431,6 +446,12 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     invalidate();
   }
   function up(event: PointerEvent) {
+    if (outsidePress?.id === event.pointerId) {
+      const press = outsidePress;
+      outsidePress = null;
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) <= 6 && hit(event) === undefined) select(-1);
+      return;
+    }
     if (!gesture || gesture.id !== event.pointerId) return;
     const dragged = gesture.dragged;
     if (event.timeStamp - gesture.time > 120) { velocity = 0; inertia = { value: 0 }; }
@@ -440,6 +461,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     invalidate();
   }
   function cancel() {
+    outsidePress = null;
     if (!gesture) return;
     const id = gesture?.id;
     gesture = null; velocity = 0; inertia = { value: 0 };
@@ -475,8 +497,9 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       const wasSelected = selected >= 0;
       cancel();
       selected = -1; introFinished = false; introElapsed = 0; elapsed = 0;
+      introSpin = createIntroSpin(options.autoRotate !== false && options.speed !== 0);
       rotationTarget = options.rotation ?? 0; velocity = currentSpeed = lastUpgrade = 0;
-      rotation = { value: rotationTarget }; inertia = { value: 0 }; wind = { value: 0 };
+      rotation = { value: rotationTarget }; inertia = { value: 0 }; wind.reset();
       for (const card of cards) { card.open = 0; card.scale = 1; card.pulse = { value: 0, phase: 'idle', closing: false }; card.openingStarted = false; }
       title.textContent = options.title ?? 'Beautiful Designs\nAdvanced Interactions'; close.hidden = true; status.textContent = 'Drag to explore';
       titleEffect.reset(title.textContent!, !reducedMotion.matches);
@@ -507,9 +530,10 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
         previous.dispose();
       }
       if (next.items) {
+        introSpin.cancel();
         cancel();
         selected = -1; rotationTarget = options.rotation ?? 0; velocity = currentSpeed = 0;
-        rotation = { value: rotationTarget }; inertia = { value: 0 }; wind = { value: 0 };
+        rotation = { value: rotationTarget }; inertia = { value: 0 }; wind.reset();
         buildCards();
       }
       if (rebuildRibbon) {
@@ -518,10 +542,12 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
         scene.add(ribbon.mesh); ribbon.enhance(options.fabric);
       } else if (next.fabric) ribbon.enhance(next.fabric);
       if (next.rotation !== undefined) {
+        introSpin.cancel();
         cancel(); rotationTarget = next.rotation; rotation = { value: rotationTarget };
         inertia = { value: 0 }; velocity = 0;
       }
       if (next.intro === false) introFinished = true;
+      if (next.intro === false || next.autoRotate === false || next.speed === 0) introSpin.cancel();
       if (selected < 0) { title.textContent = options.title ?? 'Beautiful Designs\nAdvanced Interactions'; close.hidden = true; status.textContent = 'Drag to explore'; }
       titleEffect.setText(title.textContent!);
       if (next.intro === false) titleEffect.reset(title.textContent!, false);
@@ -546,7 +572,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       renderer.forceContextLoss();
       root.remove();
     },
-    getStats() { return { introFinished, introElapsed, rotation: rotation.value, speed: currentSpeed, wind: wind.value, foregroundTop, title: titleEffect.getState(), count: cards.length, radius: layout.radius, gapDegrees: layout.gapDegrees, cardDegrees: layout.cardAngle * 180 / Math.PI, width, height, triangles: renderer.info.render.triangles, textures: renderer.info.memory.textures, renderedFrames, pendingImages: activeLoads + queue.length, isAnimating: !!frameId, selected: selected < 0 ? null : options.items[selected].id }; },
+    getStats() { return { introFinished, introElapsed, introSpeed: introSpin.value, rotation: rotation.value, speed: currentSpeed, wind: wind.value, foregroundTop, title: titleEffect.getState(), count: cards.length, radius: layout.radius, gapDegrees: layout.gapDegrees, cardDegrees: layout.cardAngle * 180 / Math.PI, width, height, triangles: renderer.info.render.triangles, textures: renderer.info.memory.textures, renderedFrames, pendingImages: activeLoads + queue.length, isAnimating: !!frameId, selected: selected < 0 ? null : options.items[selected].id }; },
   };
 }
 

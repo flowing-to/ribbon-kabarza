@@ -1,6 +1,71 @@
 import { expect, test } from 'bun:test';
 import { evaluateTrack, sampleIntro, INTRO_DURATION, type Keyframe } from './timeline';
-import { startPulse, stepPulse, type Pulse } from './motion';
+import { createIntroSpin, createWindMotion, startPulse, stepPulse, type Pulse } from './motion';
+
+test('wind responds within a frame, stays bounded and fades without an acceleration overshoot', () => {
+  const wind = createWindMotion();
+  const peak = (4 - 0.1) * 0.28;
+  expect(wind.update(4, 1 / 60)).toBeGreaterThan(peak * 0.7);
+  for (let frame = 0; frame < 120; frame++) {
+    const value = wind.update(frame % 2 ? 4 : -4, 1 / 60);
+    expect(value).toBeGreaterThanOrEqual(0);
+    expect(value).toBeLessThanOrEqual(peak);
+  }
+  const beforeRelease = wind.value;
+  expect(wind.update(0, 1 / 60)).toBeLessThan(beforeRelease);
+  for (let frame = 0; frame < 120; frame++) wind.update(0, 1 / 60);
+  expect(wind.value).toBe(0);
+  wind.update(4, 1 / 60); wind.reset();
+  expect(wind.value).toBe(0);
+  expect(wind.update(0.1, 1 / 60, false)).toBe(0);
+});
+
+test('wind responds to acceleration at low speed and has a consistent envelope across refresh rates', () => {
+  const acceleration = createWindMotion();
+  expect(acceleration.update(0.1, 1 / 60)).toBeGreaterThan(0);
+  const samples = [30, 60, 120].map(hz => {
+    const wind = createWindMotion();
+    for (let frame = 0; frame < hz; frame++) wind.update(4, 1 / hz);
+    for (let frame = 0; frame < hz / 2; frame++) wind.update(0, 1 / hz, false);
+    return wind.value;
+  });
+  for (const value of samples) expect(value).toBeCloseTo(samples[1], 8);
+});
+
+test('entrance spin builds before emergence and decays at a consistent rate across refresh rates', () => {
+  const samples = [30, 60, 120].map(hz => {
+    const spin = createIntroSpin(true);
+    for (let frame = 0; frame < hz * 2; frame++) expect(spin.update(1 / hz, false)).toBe(0);
+    const start = spin.update(1 / hz, true);
+    let middle = start;
+    for (let frame = 1; frame < hz * 2; frame++) middle = spin.update(1 / hz, true);
+    let end = middle;
+    for (let frame = 0; frame < hz * 20; frame++) end = spin.update(1 / hz, true);
+    expect(start).toBeGreaterThan(2.3);
+    expect(middle).toBeGreaterThan(1);
+    expect(middle).toBeLessThan(start);
+    expect(end).toBe(0);
+    expect(spin.active).toBe(false);
+    return middle;
+  });
+  for (const value of samples) expect(value).toBeCloseTo(samples[1], 2);
+});
+
+test('manual input cancels entrance momentum; a fresh replay restores it', () => {
+  const spin = createIntroSpin(true);
+  spin.update(2, false);
+  expect(spin.update(1 / 60, true)).toBeGreaterThan(2);
+  spin.cancel();
+  expect(spin.update(2, false)).toBe(0);
+  expect(spin.update(1, true)).toBe(0);
+  expect(spin.active).toBe(false);
+  const replay = createIntroSpin(true);
+  replay.update(2, false);
+  expect(replay.update(1 / 60, true)).toBeGreaterThan(2);
+  const disabled = createIntroSpin(false);
+  disabled.update(4, false);
+  expect(disabled.update(1, true)).toBe(0);
+});
 
 test('exported intro starts immediately and ends with the original camera and progress', () => {
   expect(sampleIntro(0).progress).toBeCloseTo(-0.01628327240327612, 10);
