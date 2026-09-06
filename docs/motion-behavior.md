@@ -8,30 +8,11 @@ Horizontal travel must exceed 6 pixels to count as dragging. A primarily vertica
 
 ## Drag tracking and release
 
-For a horizontal pointer step `dx`, container width `W`, and event interval `dtEvent`:
+Pointer movement advances the target by `-dx / containerWidth × 9.6` radians (four times checkpoint 5). The ring follows with a short 35 ms maath smooth time using actual frame delta. This adds a little acceleration and braking while held, without limiting total travel. At 60 Hz, a stationary target is approximately 95% reached within 83 ms.
 
-```text
-angleStep = -dx / W × 2.4
-rotationTarget += angleStep
-velocityInput = clamp(angleStep × (5 / 1.2) / max(0.008, dtEvent), -4, 4)
-```
+Each frame measures actual angular speed from the rotation change divided by frame delta. On release, that speed becomes the initial coast speed, and any remaining pointer-target offset is discarded. Coast uses the existing 1.3 smooth time and `frameDelta × 0.6`, with a fresh damping derivative. Position then integrates the eased speed directly, avoiding a second filter that would cause a pause and renewed acceleration. There is no release-speed clamp; wind alone is capped to the previous ±4 rad/s input envelope to preserve the deformation strength.
 
-A full-container-width drag changes the target by 2.4 radians (137.5°). The velocity input used for release and wind is capped at ±4 rad/s (±229°/s). This does not cap direct pointer travel or guarantee a hard cap on the filtered release speed. The 8 ms event-interval floor stabilizes velocity estimation; it is not an 8 ms tracking delay.
-
-The current maath filters receive frame delta multiplied by 0.6:
-
-| Filter | Configured smooth time | Approximate wall-clock response scale |
-| --- | ---: | ---: |
-| Ring follows dragged position | 0.1 | 167 ms |
-| Drag velocity estimate rises | 0.12 | 200 ms |
-| Release velocity decays | 1.3 | 2.17 s |
-| Selected card alignment | 0.25 | 417 ms |
-
-These are smoothing scales, not fixed delays or exact stop times. For example, an isolated position step takes roughly 0.4 seconds to reach 95% of its target with the current position filter. There is no separate hard acceleration limit. The position filter explains the visible trailing during a quick drag.
-
-During a drag, pointer steps advance the target directly; filtered velocity supplies release momentum and no longer delays wind. After release, angular speed is steady autoplay (default 0.1 rad/s) plus release momentum and any remaining entrance momentum. The target advances by `speed × frameDelta`. Holding still for over 120 ms before releasing a card clears release momentum. The maath derivative carried from drag into release can briefly increase filtered momentum as its smoothing time changes.
-
-**Suggested next tuning, not applied yet:** use near-direct position tracking or approximately 6–8 ms smoothing while held, then capture the recent pointer velocity and decay it separately after release. This would preserve a long coast without using the slow position filter to follow the pointer. A 60 Hz display still presents frames about every 16.7 ms.
+Holding the pointer still lets the short tracking filter settle and its measured speed approach zero, naturally reducing the subsequent coast. Selection alignment retains its separate 0.25 smooth time.
 
 ## Entrance spin
 
@@ -41,7 +22,7 @@ At the handoff, this separate momentum begins rotating the ring and decays with 
 
 ## Wind response
 
-Wind now reads the current raw drag velocity while the pointer moves, and the actual combined rotational speed during free coasting. A held pointer with no movement for 50 ms supplies zero velocity, so stale input cannot keep the wind active.
+Wind reads actual ring speed during dragging and free coasting, capped to ±4 rad/s for deformation only. It follows the short drag response and naturally fades when held still.
 
 ```text
 acceleration = abs(speed - previousSpeed) / frameDelta

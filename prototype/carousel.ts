@@ -76,7 +76,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
   let generation = 0;
   let frameId = 0;
   let width = 1, height = 1;
-  let rotationTarget = options.rotation ?? 0, velocity = 0;
+  let rotationTarget = options.rotation ?? 0;
   let rotation = { value: rotationTarget };
   let inertia = { value: 0 };
   let introSpin = createIntroSpin(initial.intro !== false && initial.autoRotate !== false && initial.speed !== 0);
@@ -284,7 +284,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     }
     selected = index;
     introSpin.cancel();
-    velocity = 0; inertia = { value: 0 };
+    inertia = { value: 0 };
     if (index >= 0) {
       const target = selectionRotation(index);
       rotationTarget = shortestAngle(rotation.value, target);
@@ -317,7 +317,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       introSpin.cancel();
       introFinished = true;
       rotation = { value: rotationTarget };
-      inertia = { value: 0 }; wind.reset(); velocity = 0;
+      inertia = { value: 0 }; wind.reset();
     }
     if (!introFinished) {
       introElapsed += dt;
@@ -337,17 +337,29 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     const emerging = intro.progress >= ribbon.start;
     const entranceSpeed = introSpin.update(dt, emerging);
     if (emerging && selected < 0) {
-      damp(inertia, 'value', gesture?.dragged ? velocity : 0, gesture?.dragged ? 0.12 : (options.releaseDamping ?? RELEASE_SMOOTH_TIME), dt * 0.6);
-      const baseSpeed = options.autoRotate !== false && !reducedMotion.matches && !hovered ? options.speed ?? 0.1 : 0;
-      currentSpeed = baseSpeed + entranceSpeed + inertia.value;
-      if (!gesture) rotationTarget += currentSpeed * dt;
-    } else currentSpeed = 0;
-    damp(rotation, 'value', rotationTarget, selected >= 0 ? 0.25 : 0.1, dt * 0.6);
+      if (gesture) {
+        const previousRotation = rotation.value;
+        // A short response while held; release inherits this actual motion.
+        damp(rotation, 'value', rotationTarget, 0.035, dt);
+        currentSpeed = dt > 0 ? (rotation.value - previousRotation) / dt : 0;
+      } else {
+        damp(inertia, 'value', 0, options.releaseDamping ?? RELEASE_SMOOTH_TIME, dt * 0.6);
+        const baseSpeed = options.autoRotate !== false && !reducedMotion.matches && !hovered ? options.speed ?? 0.1 : 0;
+        currentSpeed = baseSpeed + entranceSpeed + inertia.value;
+        rotationTarget += currentSpeed * dt;
+        // Momentum is already eased. A second position filter would brake
+        // the handoff and then accelerate the ring again after release.
+        rotation = { value: rotationTarget };
+      }
+    } else {
+      currentSpeed = 0;
+      damp(rotation, 'value', rotationTarget, selected >= 0 ? 0.25 : 0.1, dt * 0.6);
+    }
     // Spin around the circle's own normal; pose and center stay fixed outside it.
     ring.rotation.set(0, -rotation.value, 0);
     ringPose.updateMatrixWorld(true);
     camera.updateMatrixWorld();
-    const windSpeed = gesture ? (gesture.dragged && now - gesture.time <= 50 ? velocity : 0) : currentSpeed;
+    const windSpeed = THREE.MathUtils.clamp(currentSpeed, -4, 4);
     if (!reducedMotion.matches) wind.update(windSpeed, dt, selected < 0);
     ring.getWorldQuaternion(inverseRing).invert();
     const focal = 2 * Math.tan(camera.fov * Math.PI / 360);
@@ -424,7 +436,6 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     }
     gesture = { id: event.pointerId, startX: event.clientX, startY: event.clientY, lastX: event.clientX, time: event.timeStamp, dragged: false };
     introSpin.cancel();
-    velocity = 0;
     canvas.setPointerCapture(event.pointerId);
     invalidate();
   }
@@ -438,9 +449,8 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     if (!gesture.dragged && Math.abs(totalY) > 10 && Math.abs(totalY) > Math.abs(totalX)) { cancel(); return; }
     gesture.dragged ||= Math.abs(totalX) > 6;
     if (gesture.dragged && selected < 0) {
-      const delta = -dx / width * 2.4;
+      const delta = -dx / width * 9.6;
       rotationTarget += delta;
-      velocity = THREE.MathUtils.clamp(delta * (5 / 1.2) / Math.max(0.008, (event.timeStamp - gesture.time) / 1000), -4, 4);
     }
     gesture.lastX = event.clientX; gesture.time = event.timeStamp;
     invalidate();
@@ -454,7 +464,12 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     }
     if (!gesture || gesture.id !== event.pointerId) return;
     const dragged = gesture.dragged;
-    if (event.timeStamp - gesture.time > 120) { velocity = 0; inertia = { value: 0 }; }
+    if (dragged && selected < 0) {
+      const baseSpeed = options.autoRotate !== false && !reducedMotion.matches && !hovered ? options.speed ?? 0.1 : 0;
+      inertia = { value: currentSpeed - baseSpeed };
+      rotationTarget = rotation.value;
+      rotation = { value: rotationTarget };
+    }
     gesture = null;
     if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
     if (!dragged) { const index = hit(event); select(index === undefined || index === selected ? -1 : index); }
@@ -464,11 +479,11 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
     outsidePress = null;
     if (!gesture) return;
     const id = gesture?.id;
-    gesture = null; velocity = 0; inertia = { value: 0 };
+    gesture = null; inertia = { value: 0 };
     if (id !== undefined && canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
     invalidate();
   }
-  function navigate(direction: number) { select((Math.max(0, selected) + direction + cards.length) % cards.length); }
+  function navigate(direction: number) { select((Math.max(0, selected) - direction + cards.length) % cards.length); }
   function key(event: KeyboardEvent) {
     if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); navigate(event.key === 'ArrowRight' ? 1 : -1); }
     if (event.key === 'Escape') select(-1);
@@ -498,7 +513,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       cancel();
       selected = -1; introFinished = false; introElapsed = 0; elapsed = 0;
       introSpin = createIntroSpin(options.autoRotate !== false && options.speed !== 0);
-      rotationTarget = options.rotation ?? 0; velocity = currentSpeed = lastUpgrade = 0;
+      rotationTarget = options.rotation ?? 0; currentSpeed = lastUpgrade = 0;
       rotation = { value: rotationTarget }; inertia = { value: 0 }; wind.reset();
       for (const card of cards) { card.open = 0; card.scale = 1; card.pulse = { value: 0, phase: 'idle', closing: false }; card.openingStarted = false; }
       title.textContent = options.title ?? 'Beautiful Designs\nAdvanced Interactions'; close.hidden = true; status.textContent = 'Drag to explore';
@@ -532,7 +547,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       if (next.items) {
         introSpin.cancel();
         cancel();
-        selected = -1; rotationTarget = options.rotation ?? 0; velocity = currentSpeed = 0;
+        selected = -1; rotationTarget = options.rotation ?? 0; currentSpeed = 0;
         rotation = { value: rotationTarget }; inertia = { value: 0 }; wind.reset();
         buildCards();
       }
@@ -544,7 +559,7 @@ export function mountRibbonCarousel(container: HTMLElement, initial: CarouselOpt
       if (next.rotation !== undefined) {
         introSpin.cancel();
         cancel(); rotationTarget = next.rotation; rotation = { value: rotationTarget };
-        inertia = { value: 0 }; velocity = 0;
+        inertia = { value: 0 };
       }
       if (next.intro === false) introFinished = true;
       if (next.intro === false || next.autoRotate === false || next.speed === 0) introSpin.cancel();

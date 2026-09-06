@@ -39,9 +39,11 @@
           if (captured) card = { x, y };
         }
         check(card, 'Could not find a card to start the release regression');
+        const dragStart = instance.getStats().rotation;
         for (let step = 1; step <= 8; step++) {
           const frames = instance.getStats().renderedFrames;
           await delay(20); pointer('pointermove', card.x - step * 12, card.y);
+
           if (step === 1) {
             const deadline = performance.now() + 1000;
             while (instance.getStats().renderedFrames <= frames) {
@@ -55,13 +57,17 @@
         }
         const activeWind = instance.getStats().wind;
         await delay(200);
+        check(Math.abs(instance.getStats().rotation - dragStart - 96 / 390 * 9.6) < 0.02, 'Held tracking did not settle at four times the previous strength');
         check(instance.getStats().wind < activeWind * 0.7, 'Holding the pointer still retained stale drag wind');
         for (let step = 9; step <= 12; step++) {
           await delay(20); pointer('pointermove', card.x - step * 12, card.y);
+
         }
+        await delay(20);
+        const releaseSpeed = instance.getStats().speed;
         pointer('pointerup', card.x - 144, card.y);
         await delay(40);
-        check(instance.getStats().speed > 0.05, 'Card drag did not establish momentum');
+        check(releaseSpeed > 0.05 && instance.getStats().speed > releaseSpeed * 0.85 && instance.getStats().speed <= releaseSpeed * 1.01, 'Release braked or reaccelerated instead of preserving actual drag speed');
         const before = instance.getStats();
         pointer('pointerdown', blank.x, blank.y);
         check(!captured, 'Empty space acquired drag capture');
@@ -86,6 +92,7 @@
         await idle(instance);
         selections.length = 0;
         passed.push('Empty-space clicks/holds/drags preserve coasting; card drag and click-away still work');
+        passed.push('Smoothed 4× tracking and continuous release speed');
         passed.push('Wind responds directly to a fast drag without waiting for coast momentum');
       } finally {
         canvas.setPointerCapture = capture.set; canvas.hasPointerCapture = capture.has; canvas.releasePointerCapture = capture.release;
